@@ -33,21 +33,30 @@
     const errorsContainer = $("<div class=\"errorsContainer\">");
     errorsContainer.appendTo($("body"));
 
-    function bubbleErrorInHtml(passed_args, bubbleType) {
+    function bubbleErrorInHtml(event, bubbleType) {
       bubbleType = ['primary', 'danger', 'warning'].includes(bubbleType) ? bubbleType : 'primary';
       // set the message to display: none to fade it in later.
       const message = $("<div class=\"alert alert-dismissible fade show\" style=\"display: none;\">");
       message.addClass('alert-' + bubbleType)
       // a close button
       const close = $("<button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\">&times</button>");
-      message.append(close); // adding the close button to the message
-      message.append(passed_args[0]); // adding the error response to the message
-      // add the message element to the body, fadein, wait 3secs, fadeout
-      message.prependTo(errorsContainer).fadeIn(300); //.delay(10000).fadeOut(500); //.delay(5000).fadeOut(500);
+      if(typeof event === 'string'){
+        message.append(close); // adding the close button to the message
+        message.append(event); // adding the error response to the message
+        message.prependTo(errorsContainer).fadeIn(300); //.delay(10000).fadeOut(500); //.delay(5000).fadeOut(500);
+      } else {
+        // set the message to display: none to fade it in later.
+        const message = $("<div class=\"alert alert-dismissible fade show\" style=\"display: none;\">");
+        message.addClass('alert-' + bubbleType)
+        const close = $("<button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\">&times</button>");
+        message.append(close); // adding the close button to the message
+        message.append(event.statusCode + " " + event.url + " " + event.duration); // adding the error response to the message
+        message.prependTo(errorsContainer).fadeIn(300); //.delay(10000).fadeOut(500); //.delay(5000).fadeOut(500);
+      }
     }
 
     console.error = function() {
-      bubbleErrorInHtml(arguments, 'danger');
+      bubbleErrorInHtml(arguments[0], 'danger');
       // default &  console.error()
       console.defaultError.apply(console, arguments);
       // new & array data
@@ -55,7 +64,7 @@
     };
 
     console.warn = function() {
-      bubbleErrorInHtml(arguments, 'warning');
+      bubbleErrorInHtml(arguments[0], 'warning');
       // default &  console.error()
       console.defaultWarn.apply(console, arguments);
       // new & array data
@@ -63,7 +72,7 @@
     };
 
     console.info = function() {
-      bubbleErrorInHtml(arguments, 'primary');
+      bubbleErrorInHtml(arguments[0], 'primary');
       // default &  console.error()
       console.defaultInfo.apply(console, arguments);
       // new & array data
@@ -76,9 +85,9 @@
     GM_addStyle(spinnerCss);
     const myCss = GM_getResourceText("REMOTE_CSS");
     GM_addStyle(myCss);
-    const errorMessageCss = ".alert {margin: 0px !important; font-size:13px !important}";
+    const errorMessageCss = ".alert {opacity: 0.9; margin: 0px !important; font-size:13px !important}";
     GM_addStyle(errorMessageCss);
-    const errorsContainerCss = ".errorsContainer {position: fixed !important; top: 0% !important; background-color: blue !important; width: 100% !important; z-index: 99999999 !important;}";
+    const errorsContainerCss = ".errorsContainer {position: fixed !important; top: 0% !important; height: 400px !important; width: 100% !important;overflow: hidden !important; z-index: 99999999 !important;}";
     GM_addStyle(errorsContainerCss);
 
     if ("serviceWorker" in navigator) {
@@ -156,6 +165,19 @@
             this._url = url;
             open.call(this, method, url, async, user, pass);
           };
+
+          function sendToConsole(event, stats) {
+            stats.forEach((stat)=>{
+              if (stat.statusCode >= 200 && stat.statusCode < 400) {
+                console.info(stat);
+              } else if (stat.statusCode === 404) {
+                console.warn(stat);
+              } else {
+                console.error(stat);
+              }
+            })
+          }
+
           //Monkey patch send to be able to profile responses time and log it
           XHR.prototype.send = function(data) {
             let self = this;
@@ -163,22 +185,24 @@
             let oldOnReadyStateChange;
             let url = this._url;
 
-            function onReadyStateChange() {
+            function onReadyStateChange(event) {
+              //Info: Log all you need from event
               if (self.readyState === 4 /* complete */) {
                 let time = new Date() - start;
                 stats.push({
                   url: url,
-                  duration: time
+                  duration: time + 'ms',
+                  statusCode: event.currentTarget.status
                 });
 
                 if (!timeoutId) {
                   timeoutId = window.setTimeout(function() {
+                    sendToConsole(event, stats);
                     // let xhr = new XHR();
                     // xhr.noIntercept = true;
                     // xhr.open("POST", "/clientAjaxStats", true);
                     // xhr.setRequestHeader("Content-type", "application/json");
                     // xhr.send(JSON.stringify({ stats: stats }));
-                    console.info('OnreadyStateChange: ' + JSON.stringify(stats, null , 2))
                     timeoutId = null;
                     stats = [];
                   }, 2000);
