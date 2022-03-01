@@ -153,7 +153,7 @@
         console.error("window.rejectionhandled: " + (promiseRejectionEvent.reason.message || promiseRejectionEvent.error || promiseRejectionEvent));
       });
       window.addEventListener("error", function(errorEvent) {
-        console.error("window.error: " + (errorEvent.reason.message || errorEvent.error || errorEvent));
+        console.error("window.error: " + (errorEvent.reason.message || errorEvent.error || errorEvent.message|| errorEvent));
       });
       window.addEventListener("fetch", function(event) {
         console.warn("window.fetch: " + (event.reason.message || event.error || event));
