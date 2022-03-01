@@ -7,7 +7,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      0.1
 // @description  log uncaught window (XHR.send, XHR.onerror) exceptions and write them in the document as bootstrap alert html elements
-// @author       Sloppy Lo
+// @author       Sergio Lopez
 // @match        http*://*/*
 // @icon         https://store-images.s-microsoft.com/image/apps.32031.13510798887630003.b4c5c861-c9de-4301-99ce-5af68bf21fd1.ba559483-bc2c-4eb9-a17e-c302009b2690?w=180&h=180&q=60
 // @resource     REMOTE_BOOTSTRAP_CSS https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css
@@ -43,6 +43,7 @@
     containerSvg.appendTo(requestsBox);
     containerInfo.prependTo(requestsBox);
     requestsBox.appendTo($("body"));
+
     // responsesBox.appendTo($("body"));
 
     function importCSS() {
@@ -60,9 +61,9 @@
       GM_addStyle(requestsBoxCss);
       // const responsesBoxCss = ".responsesBox {position: fixed !important; right: 0% !important; top: 70% !important; width: 50% !important; z-index: 99999999 !important; overflow-y: scroll !important;}";
       // GM_addStyle(responsesBoxCss);
-      const containerErrorsCss = ".containerErrors {position: fixed !important; top: 54.5% !important; max-height: 462px !important; width: 25% !important; overflow-y: scroll !important; z-index: 99999999 !important;}";
+      const containerErrorsCss = ".containerErrors {position: fixed !important; top: 54.5% !important; max-height: 462px !important; width: 30% !important; overflow-y: scroll !important; z-index: 99999999 !important;}";
       GM_addStyle(containerErrorsCss);
-      const containerSvgCss = ".svgContainer {position: fixed !important; bottom: 0% !important; max-height: 50px !important; width: 100% !important; z-index: 99999999 !important;}";
+      const containerSvgCss = ".svgContainer {position: fixed !important; top: 50% !important; z-index: 99999999 !important;}";
       GM_addStyle(containerSvgCss);
     }
 
@@ -77,10 +78,20 @@
       if (typeof event === "string") {
         requestLine.append(event);
       } else {
-        let url = new URL(event.url)
-        url = event.url.replace(url.origin, '');
+        let url = "";
+        try {
+          url = new URL(event.url);
+        } catch (e) {//Sometimes event.url will not have origin
+          url = event.url;
+        }
+        url = event.url.replace(url.origin, "");
         requestLine.append("<p style=\"word-break: break-word;\">" + " <a href=\"" + event.url + "\" class=\"alert-link\">" + url.substring(1, url.length) + "<a/> <br/>" + event.method.toUpperCase() + " " + event.statusCode + " " + event.duration + "<p\>"); // adding the error response to the message
-        requestLine.append(renderjson(JSON.parse(event.response)));
+        try {
+          requestLine.append(renderjson(JSON.parse(event.response)));
+        } catch (e) {
+          console.log(e);//Sometimes we get malformed jsons
+          requestLine.append(JSON.stringify(event));
+        }
       }
       requestLine.prependTo(containerInfo).fadeIn(300); //.delay(10000).fadeOut(500); //.delay(5000).fadeOut(500);
       // responseLine.prependTo(responsesBox);
@@ -89,7 +100,11 @@
     console.error = function() {
       bubbleErrorInHtml(arguments[0], "danger");
       // default &  console.error()
-      console.defaultError.apply(console, arguments);
+      try {
+        console.defaultError.apply(console, arguments);
+      } catch (e) {
+        console.log(e);
+      }
       // new & array data
       console.errors.push(Array.from(arguments));
     };
@@ -97,7 +112,11 @@
     console.warn = function() {
       bubbleErrorInHtml(arguments[0], "warning");
       // default &  console.error()
-      console.defaultWarn.apply(console, arguments);
+      try {
+        console.defaultWarn.apply(console, arguments);
+      } catch (e) {
+        console.log(e);
+      }
       // new & array data
       console.warns.push(Array.from(arguments));
     };
@@ -105,7 +124,11 @@
     console.info = function() {
       bubbleErrorInHtml(arguments[0], "primary");
       // default &  console.error()
-      console.defaultInfo.apply(console, arguments);
+      try {
+        console.defaultInfo.apply(console, arguments);
+      } catch (e) {
+        console.log(e);
+      }
       // new & array data
       console.infos.push(Array.from(arguments));
     };
@@ -113,9 +136,9 @@
     window.addEventListener("load", function() {
       if (window) {
         let _onerror = function(event, url, lineNo, columnNo, error) {
-          let message = []
-          let eventMessage = event.message ? event.message.toLowerCase() : "";
-          if(!eventMessage && event.path[0].tagName === "IMG"){//This is hacky, change me
+          let message = [];
+          let eventMessage = event.message ? event.message.toLowerCase() : event.error ? event.error : null;
+          if (!eventMessage && event.path[0].tagName === "IMG") {//This is hacky, change me
             eventMessage = event.type + " at <a href=\"#\" style=\"word-break: break-word;\">" + new Option(event.path[0].outerHTML).innerHTML + "<a\>";
           }
           if (!eventMessage) {
@@ -146,17 +169,57 @@
           return false;
         };
       }
-      window.addEventListener("unhandledrejection", function(promiseRejectionEvent) {
-        console.error("window.rejectionhandled: " + (promiseRejectionEvent.reason.message || promiseRejectionEvent.error || promiseRejectionEvent));
+      window.addEventListener("unhandledrejection", function(errorEvent) {
+        let error = undefined;
+        try {
+          if (errorEvent.reason) {
+            error = errorEvent.reason.stack || errorEvent.reason.message;
+          } else {
+            error = errorEvent.error || errorEvent.message || JSON.stringify(errorEvent);
+          }
+        } catch (e) {
+          console.log(e);
+        }
+        console.error("window.rejectionhandled: " + error);
       });
-      window.addEventListener("rejectionhandled", function(promiseRejectionEvent) {
-        console.error("window.rejectionhandled: " + (promiseRejectionEvent.reason.message || promiseRejectionEvent.error || promiseRejectionEvent));
+      window.addEventListener("rejectionhandled", function(errorEvent) {
+        let error = undefined;
+        try {
+          if (errorEvent.reason) {
+            error = errorEvent.reason.stack || errorEvent.reason.message;
+          } else {
+            error = errorEvent.error || errorEvent.message || JSON.stringify(errorEvent);
+          }
+        } catch (e) {
+          console.log(e);
+        }
+        console.error("window.rejectionhandled: " + error);
       });
       window.addEventListener("error", function(errorEvent) {
-        console.error("window.error: " + (errorEvent.reason.message || errorEvent.error || errorEvent.message|| errorEvent));
+        let error = undefined;
+        try {
+          if (errorEvent.reason) {
+            error = errorEvent.reason.stack || errorEvent.reason.message;
+          } else {
+            error = errorEvent.error || errorEvent.message || JSON.stringify(errorEvent);
+          }
+        } catch (e) {
+          console.log(e);
+        }
+        console.error("window.error: " + error);
       });
       window.addEventListener("fetch", function(event) {
-        console.warn("window.fetch: " + (event.reason.message || event.error || event));
+        let error = undefined;
+        try {
+          if (event.reason) {
+            error = event.reason.stack || event.reason.message;
+          } else {
+            error = event.error || JSON.stringify(event);
+          }
+        } catch (e) {
+          console.log(e);
+        }
+        console.warn("window.fetch: " + error);
         event.respondWith(
           fetch(event.request)
         );
@@ -202,7 +265,7 @@
               duration: time + "ms",
               statusCode: event.currentTarget.status,
               response: event.currentTarget.response,
-              method: event.currentTarget["nr@context"] && event.currentTarget["nr@context"].params ? event.currentTarget["nr@context"].params.method : ''
+              method: event.currentTarget["nr@context"] && event.currentTarget["nr@context"].params ? event.currentTarget["nr@context"].params.method : ""
             });
 
             if (!timeoutId) {
@@ -231,5 +294,32 @@
         send.call(this, data);
       };
     });
+    setTimeout(function() {
+
+
+      // let links = Array.from(document.querySelectorAll("a"));
+      // links.style("background-colors", "red");
+      const hole = "";
+    }, 2000);
+    $(document).ready(function() {
+      const allClickableElements = $("*[onclick]");
+      allClickableElements.css("background-colors", "red");
+      const buttons = $("button");
+      // let buttonsWithEvent;
+      buttons.map((index, button) => {
+        //$(element).data('events').click ? true : false;
+        $(button).css("background", "red");
+        $(button).css("border-color", "yellow");
+        $(button).css("border", "2px");
+      });
+      const anchors = $("a");
+      // let buttonsWithEvent;
+      anchors.map((index, anchors) => {
+        //$(element).data('events').click ? true : false;
+        $(anchors).css("background", "red");
+        $(anchors).css("border-color", "yellow");
+        $(anchors).css("border", "2px");
+      });
+    })
   }
 )();
