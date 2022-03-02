@@ -5,9 +5,9 @@
 // @require      https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js
 // @require      https://cdn.rawgit.com/caldwell/renderjson/master/renderjson.js
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      1.0
 // @description  log uncaught window (XHR.send, XHR.onerror) exceptions and write them in the document as bootstrap alert html elements
-// @author       Sergio Lopez
+// @author       Sloppy Lo
 // @match        http*://*/*
 // @icon         https://store-images.s-microsoft.com/image/apps.32031.13510798887630003.b4c5c861-c9de-4301-99ce-5af68bf21fd1.ba559483-bc2c-4eb9-a17e-c302009b2690?w=180&h=180&q=60
 // @resource     REMOTE_BOOTSTRAP_CSS https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css
@@ -38,10 +38,39 @@
     const requestsBox = $("<div class=\"requestsBox\">");
     // const responsesBox = $("<div class=\"responsesBox\">");
     const containerSvg = $("<div class=\"svgContainer\">");
-    const containerInfo = $("<div class=\"containerErrors\">");
+    const containerErrors = $("<div class=\"containerErrors\">");
+    const refreshButton = $("<a class=\"btn btn-primary\" onclick=\"window.location.reload(true)\" role=\"button\">refresh</a>");
+    const hrefButton = $("<a class=\"btn btn-primary\" role=\"button\">href</a>");
+    const closeButton = $("<a class=\"btn btn-danger\" role=\"button\">X</a>");
+
+    containerSvg.on("click", function() {
+      $(".requestsBox").css('width', '');
+    });
+
+    hrefButton.on("click", function() {
+      const anchors = $("a[href]").not(".svgContainer a").not(".containerErrors a");
+      const buttons = $("button");
+      buttons.map((index, button) => {
+        // if($(button).data("events").click){
+        //   $(button).css("background", "red");
+        //   $(button).css("border-color", "yellow");
+        //   $(button).css("border", "2px");
+        // }
+      });
+      $(anchors).css("background", "red").css("border-color", "yellow").css("border", "2px");
+    });
+    closeButton.on("click", function() {
+      $(".containerErrors div").fadeOut('2000')
+    });
+    const buttonsDiv = $("<div style=\"top: 13px;position: absolute;left: 17%;\"></div>");
+    refreshButton.appendTo(buttonsDiv);
+    hrefButton.appendTo(buttonsDiv);
+    closeButton.appendTo(buttonsDiv);
+
     spinner.appendTo(containerSvg);
+    buttonsDiv.appendTo(containerSvg);
     containerSvg.appendTo(requestsBox);
-    containerInfo.prependTo(requestsBox);
+    containerErrors.prependTo(requestsBox);
     requestsBox.appendTo($("body"));
 
     // responsesBox.appendTo($("body"));
@@ -57,14 +86,33 @@
       GM_addStyle(spinnerCss);
       const errorMessageCss = ".alert {opacity: 0.95; margin: 0px !important; font-size:13px !important}";
       GM_addStyle(errorMessageCss);
-      const requestsBoxCss = ".requestsBox {position: fixed !important; top: 30% !important; width: 30% !important; z-index: 99999999 !important;}";
+      const requestsBoxCss = ".requestsBox {position: fixed !important; top: 30% !important; width: 30% !important; z-index: 99999999 !important;} .string {word-wrap: break-word !important;}";
       GM_addStyle(requestsBoxCss);
       // const responsesBoxCss = ".responsesBox {position: fixed !important; right: 0% !important; top: 70% !important; width: 50% !important; z-index: 99999999 !important; overflow-y: scroll !important;}";
       // GM_addStyle(responsesBoxCss);
       const containerErrorsCss = ".containerErrors {position: fixed !important; top: 54.5% !important; max-height: 462px !important; width: 30% !important; overflow-y: scroll !important; z-index: 99999999 !important;}";
       GM_addStyle(containerErrorsCss);
-      const containerSvgCss = ".svgContainer {position: fixed !important; top: 50% !important; z-index: 99999999 !important;}";
+      const containerSvgCss = ".svgContainer {position: fixed !important; top: 50% !important; z-index: 99999999 !important; width: 30% !important} .svgContainer svg{float: left}";
       GM_addStyle(containerSvgCss);
+    }
+
+    function appendObjectToHTML(event, requestLine) {
+      let url;
+      try {
+        url = new URL(event.url);
+      } catch (e) {//Sometimes event.url will not have origin
+        url = event.url;
+      }
+      url = event.url.replace(url.origin, "");
+      let jsonHTML;
+      try {
+        jsonHTML = renderjson(JSON.parse(event.response));
+      } catch (e) {
+        console.log(e);//Sometimes we get malformed jsons
+        jsonHTML = JSON.stringify(event);
+      }
+      requestLine.append("<p style=\"word-break: break-word;\">" + " <a href=\"" + event.url + "\" class=\"alert-link\">" + url.substring(1, url.length) + "<a/> <br/>" + (event.method ? event.method.toUpperCase() : "") + " " + event.statusCode + " " + event.duration + "<p\>"); // adding the error response to the message
+      requestLine.append(jsonHTML);
     }
 
     function bubbleErrorInHtml(event, bubbleType) {
@@ -78,33 +126,15 @@
       if (typeof event === "string") {
         requestLine.append(event);
       } else {
-        let url = "";
-        try {
-          url = new URL(event.url);
-        } catch (e) {//Sometimes event.url will not have origin
-          url = event.url;
-        }
-        url = event.url.replace(url.origin, "");
-        requestLine.append("<p style=\"word-break: break-word;\">" + " <a href=\"" + event.url + "\" class=\"alert-link\">" + url.substring(1, url.length) + "<a/> <br/>" + event.method.toUpperCase() + " " + event.statusCode + " " + event.duration + "<p\>"); // adding the error response to the message
-        try {
-          requestLine.append(renderjson(JSON.parse(event.response)));
-        } catch (e) {
-          console.log(e);//Sometimes we get malformed jsons
-          requestLine.append(JSON.stringify(event));
-        }
+        appendObjectToHTML(event, requestLine);
       }
-      requestLine.prependTo(containerInfo).fadeIn(300); //.delay(10000).fadeOut(500); //.delay(5000).fadeOut(500);
-      // responseLine.prependTo(responsesBox);
+      requestLine.prependTo(containerErrors).fadeIn(300); //.delay(10000).fadeOut(500); //.delay(5000).fadeOut(500);
     }
 
     console.error = function() {
       bubbleErrorInHtml(arguments[0], "danger");
       // default &  console.error()
-      try {
-        console.defaultError.apply(console, arguments);
-      } catch (e) {
-        console.log(e);
-      }
+      console.defaultError.apply(console, arguments);
       // new & array data
       console.errors.push(Array.from(arguments));
     };
@@ -112,11 +142,7 @@
     console.warn = function() {
       bubbleErrorInHtml(arguments[0], "warning");
       // default &  console.error()
-      try {
-        console.defaultWarn.apply(console, arguments);
-      } catch (e) {
-        console.log(e);
-      }
+      console.defaultWarn.apply(console, arguments);
       // new & array data
       console.warns.push(Array.from(arguments));
     };
@@ -124,11 +150,7 @@
     console.info = function() {
       bubbleErrorInHtml(arguments[0], "primary");
       // default &  console.error()
-      try {
-        console.defaultInfo.apply(console, arguments);
-      } catch (e) {
-        console.log(e);
-      }
+      console.defaultInfo.apply(console, arguments);
       // new & array data
       console.infos.push(Array.from(arguments));
     };
@@ -263,9 +285,9 @@
             stats.push({
               url: url,
               duration: time + "ms",
-              statusCode: event.currentTarget.status,
-              response: event.currentTarget.response,
-              method: event.currentTarget["nr@context"] && event.currentTarget["nr@context"].params ? event.currentTarget["nr@context"].params.method : ""
+              statusCode: event.currentTarget.status || null,
+              response: event.currentTarget.response || null,
+              method: event.currentTarget["nr@context"] && event.currentTarget["nr@context"].params ? event.currentTarget["nr@context"].params.method : null
             });
 
             if (!timeoutId) {
@@ -294,32 +316,5 @@
         send.call(this, data);
       };
     });
-    setTimeout(function() {
-
-
-      // let links = Array.from(document.querySelectorAll("a"));
-      // links.style("background-colors", "red");
-      const hole = "";
-    }, 2000);
-    $(document).ready(function() {
-      const allClickableElements = $("*[onclick]");
-      allClickableElements.css("background-colors", "red");
-      const buttons = $("button");
-      // let buttonsWithEvent;
-      buttons.map((index, button) => {
-        //$(element).data('events').click ? true : false;
-        $(button).css("background", "red");
-        $(button).css("border-color", "yellow");
-        $(button).css("border", "2px");
-      });
-      const anchors = $("a");
-      // let buttonsWithEvent;
-      anchors.map((index, anchors) => {
-        //$(element).data('events').click ? true : false;
-        $(anchors).css("background", "red");
-        $(anchors).css("border-color", "yellow");
-        $(anchors).css("border", "2px");
-      });
-    })
   }
 )();
