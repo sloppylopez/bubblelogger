@@ -3,10 +3,11 @@
 // @require      https://code.jquery.com/jquery-3.4.1.min.js
 // @require      https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js
 // @require      https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js
-// @require      https://cdn.rawgit.com/caldwell/renderjson/master/renderjson.js
+// @require      https://cdn.jsdelivr.net/npm/renderjson@1.4.0/renderjson.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/rxjs/8.0.0-alpha.2/rxjs.umd.min.js
 // @namespace    http://tampermonkey.net/
 // @version      1.0
+// @license      MIT
 // @description  log uncaught window (XHR.send, XHR.onerror) exceptions and write them in the document as bootstrap alert html elements
 // @author       Sloppy Lo
 // @match        http*://*/*
