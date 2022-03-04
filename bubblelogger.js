@@ -79,7 +79,7 @@
         $(buttonsDiv).css("display", "none");
         $(".containerErrors div").fadeOut("2000");
         $(containerSvg).css("left", "1%");
-        $(requestsBox).css("left", "-35%");
+        $(requestsBox).css("left", "-37%");
         // $(containerErrors).css("display", "none");
         setTimeout(() => {
           $(requestsBox).addClass("customCollapse");
@@ -131,7 +131,7 @@
       GM_addStyle(spinnerCss);
       const errorMessageCss = ".alert {word-break: break-word !important; opacity: 0.95 !important; margin: 0px !important; font-size:13px !important}";
       GM_addStyle(errorMessageCss);
-      const requestsBoxCss = ".requestsBox { overflow-y: scroll !important; max-height: 88% !important; opacity: 0.95 !important; position: fixed !important; top: 17% !important; width: 40% !important; z-index: 99999999 !important; left: -35%;} .string {word-wrap: break-word !important;}";
+      const requestsBoxCss = ".requestsBox { overflow-y: scroll !important; max-height: 88% !important; opacity: 0.95 !important; position: fixed !important; top: 17% !important; width: 40% !important; z-index: 99999999 !important; left: -37%;} .string {word-wrap: break-word !important;}";
       GM_addStyle(requestsBoxCss);
       const svgDivCss = ".svgDiv {width: 100% !important; float: left !important; background-color: black !important} .svgContainer svg {float: right !important}";
       GM_addStyle(svgDivCss);
@@ -141,7 +141,7 @@
       // GM_addStyle(responsesBoxCss);
       const containerErrorsCss = ".containerErrors {display: none; width: 100% !important; position: relative !important; overflow-y: scroll !important; z-index: 99999999 !important;}";
       GM_addStyle(containerErrorsCss);
-      const containerSvgCss = ".svgContainer {cursor: pointer !important;left: 1%; width: 100% !important; float: left !important; opacity: 0.95 !important; background-color: gainsboro !important; position: relative !important; z-index: 99999999 !important;} .svgContainer svg{float: left}";
+      const containerSvgCss = ".svgContainer {cursor: pointer !important;left: 1%; z-index: 99999999 !important;} .svgContainer svg{float: left}";
       GM_addStyle(containerSvgCss);
     }
 
