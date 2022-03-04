@@ -77,13 +77,13 @@
         }, 2000);
         $(".svgDiv svg").css("float", "left");
         $(buttonsDiv).css("display", "none");
-        $(".containerErrors div").fadeOut("2000");
-        $(containerSvg).css("left", "1%");
-        $(requestsBox).css("left", "-37%");
         // $(containerErrors).css("display", "none");
         setTimeout(() => {
+          $(".containerErrors div").fadeOut("2000");
           $(requestsBox).addClass("customCollapse");
-        }, 500);
+          $(containerSvg).css("left", "1%");
+          $(requestsBox).css("left", "-37%");
+        }, 1000);
       }
       // $(containerErrors).siblings().hide("slow");
     });
