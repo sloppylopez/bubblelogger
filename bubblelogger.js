@@ -12,7 +12,7 @@
 // @match        http*://*/*
 // @icon         https://store-images.s-microsoft.com/image/apps.32031.13510798887630003.b4c5c861-c9de-4301-99ce-5af68bf21fd1.ba559483-bc2c-4eb9-a17e-c302009b2690?w=180&h=180&q=60
 // @resource     REMOTE_BOOTSTRAP_CSS https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css
-// @resource     REMOTE_JSONVIEWER_CSS https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css
+// @resource     ANIMATE_CSS_MIN https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getResourceText
 // @grant        GM_addStyle
@@ -43,16 +43,49 @@
 
     importCSS();
 
-    const requestsBox = $("<div id=\"requestsBox\" class=\"requestsBox\">");
+    const requestsBox = $("<div id=\"requestsBox\" class=\"requestsBox animate__animated animate__rollIn customCollapse\">");
     // const responsesBox = $("<div class=\"responsesBox\">");
     const containerSvg = $("<div id=\"svgContainer\" class=\"svgContainer\">");
-    const containerErrors = $("<div id=\"containerErrors\" class=\"containerErrors\">");
-    const refreshButton = $("<a class=\"btn btn-primary\" onclick=\"window.location.reload(true)\" role=\"button\">refresh</a>");
+    const containerErrors = $("<div id=\"containerErrors\" class=\"containerErrors animate__animated\">");
     const hrefButton = $("<a class=\"btn btn-primary\" role=\"button\">href</a>");
+    const refreshButton = $("<a class=\"btn btn-primary\" onclick=\"window.location.reload(true)\" role=\"button\">refresh</a>");
     const closeButton = $("<a class=\"btn btn-danger\" role=\"button\">X</a>");
+    const buttonsDiv = $("<div class=\"buttonsDiv\"></div>");
+    refreshButton.prependTo(buttonsDiv);
+    hrefButton.prependTo(buttonsDiv);
+    closeButton.prependTo(buttonsDiv);
 
-    containerSvg.on("click", function() {
-      $(".requestsBox").css("width", "");
+    spinner.prependTo(containerSvg);
+    buttonsDiv.appendTo(containerSvg);
+    containerSvg.prependTo(requestsBox);
+    containerErrors.appendTo(requestsBox);
+    requestsBox.appendTo($("body"));
+
+    spinner.on("click", function() {
+      if ($(requestsBox).hasClass("customCollapse")) {
+        $(requestsBox).removeClass("customCollapse");
+        $(".containerErrors div").fadeIn("2000");
+        $(containerSvg).css("left", "1%");
+        $(requestsBox).css("left", "0%");
+        $(".svgDiv svg").css("float", "right");
+        $(buttonsDiv).css("display", "block");
+        $(containerErrors).css("display", "block");
+      } else {
+        $(containerErrors).addClass("animate__hinge");
+        setTimeout(() => {
+          $(containerErrors).removeClass("animate__hinge");
+        }, 2000);
+        $(".svgDiv svg").css("float", "left");
+        $(buttonsDiv).css("display", "none");
+        $(".containerErrors div").fadeOut("2000");
+        $(containerSvg).css("left", "1%");
+        $(requestsBox).css("left", "-35%");
+        // $(containerErrors).css("display", "none");
+        setTimeout(() => {
+          $(requestsBox).addClass("customCollapse");
+        }, 500);
+      }
+      // $(containerErrors).siblings().hide("slow");
     });
 
     hrefButton.on("click", function() {
@@ -70,16 +103,6 @@
     closeButton.on("click", function() {
       $(".containerErrors div").fadeOut("2000");
     });
-    const buttonsDiv = $("<div class=\"buttonsDiv\"></div>");
-    refreshButton.prependTo(buttonsDiv);
-    hrefButton.prependTo(buttonsDiv);
-    closeButton.prependTo(buttonsDiv);
-
-    spinner.prependTo(containerSvg);
-    buttonsDiv.appendTo(containerSvg);
-    containerSvg.prependTo(requestsBox);
-    containerErrors.appendTo(requestsBox);
-    requestsBox.appendTo($("body"));
 
     // responsesBox.appendTo($("body"));
 
@@ -88,6 +111,8 @@
       // @see https://github.com/Tampermonkey/tampermonkey/issues/835
       const bootstrapCss = GM_getResourceText("REMOTE_BOOTSTRAP_CSS");
       GM_addStyle(bootstrapCss);
+      const animateCssMin = GM_getResourceText("ANIMATE_CSS_MIN");
+      GM_addStyle(animateCssMin);
       const jsonViewerCss = `.renderjson a { text-decoration: none; }
                             .renderjson .disclosure { color: green;
                              font-size: 150%; }
@@ -100,21 +125,23 @@
                             .renderjson .object.syntax { color: lightseagreen; }
                             .renderjson .array.syntax  { color: orange; }`;
       GM_addStyle(jsonViewerCss);
+      const customCollapse = ".customCollapse {float: right !important}";
+      GM_addStyle(customCollapse);
       const spinnerCss = ".loadingio-spinner-bean-eater-m1d52hd0p4d {top:50% !important; left:50% !important} a {display: inline !important}";
       GM_addStyle(spinnerCss);
       const errorMessageCss = ".alert {word-break: break-word !important; opacity: 0.95 !important; margin: 0px !important; font-size:13px !important}";
       GM_addStyle(errorMessageCss);
-      const requestsBoxCss = ".requestsBox {max-height: 80% !important; opacity: 0.95 !important; background-color: aliceblue !important; position: fixed !important; top: 17% !important; width: 35% !important; z-index: 99999999 !important; overflow-y: scroll !important;} .string {word-wrap: break-word !important;}";
+      const requestsBoxCss = ".requestsBox {max-height: 17% !important; opacity: 0.95 !important; position: fixed !important; top: 17% !important; width: 40% !important; z-index: 99999999 !important; overflow-y: scroll !important; left: -35%;} .string {word-wrap: break-word !important;}";
       GM_addStyle(requestsBoxCss);
-      const svgDivCss = ".svgDiv {width: 100% !important; float: left !important; background-color: black !important}";
+      const svgDivCss = ".svgDiv {width: 100% !important; float: left !important; background-color: black !important} .svgContainer svg {float: right !important}";
       GM_addStyle(svgDivCss);
-      const buttonsDivCss = ".buttonsDiv {background-color: yellow !important; width: 100% !important; position: relative !important; float: left !important; height: 23px !important;} .buttonsDiv a {width: 33.3% !important; height: 23px !important; float: left !important; text-align: center !important; font-size: 10px !important; height: 24px !important; border-color: black !important}";
+      const buttonsDivCss = ".buttonsDiv {display: none; background-color: yellow !important; width: 100% !important; position: relative !important; float: left !important; height: 28px !important;} .buttonsDiv a {width: 33.3% !important; height: 28px !important; float: left !important; text-align: center !important; font-size: 12px !important; border-color: black !important; padding-top: 5px !important}";
       GM_addStyle(buttonsDivCss);
       // const responsesBoxCss = ".responsesBox {position: fixed !important; right: 0% !important; top: 70% !important; width: 50% !important; z-index: 99999999 !important; overflow-y: scroll !important;}";
       // GM_addStyle(responsesBoxCss);
-      const containerErrorsCss = ".containerErrors {width: 100% !important; position: relative !important; overflow-y: scroll !important; z-index: 99999999 !important;}";
+      const containerErrorsCss = ".containerErrors {display: none; width: 100% !important; position: relative !important; overflow-y: scroll !important; z-index: 99999999 !important;}";
       GM_addStyle(containerErrorsCss);
-      const containerSvgCss = ".svgContainer {overflow-y: scroll !important; width: 100% !important; float: left !important; opacity: 0.95 !important; background-color: gainsboro !important; position: relative !important; z-index: 99999999 !important;} .svgContainer svg{float: left}";
+      const containerSvgCss = ".svgContainer {cursor: pointer !important;left: 1%; overflow-y: scroll !important; width: 100% !important; float: left !important; opacity: 0.95 !important; background-color: gainsboro !important; position: relative !important; z-index: 99999999 !important;} .svgContainer svg{float: left}";
       GM_addStyle(containerSvgCss);
     }
 
@@ -140,6 +167,9 @@
       } else {
         requestLine.append("<p style=\"word-break: break-word;\">" + event[0] + "<p\>"); // adding the error response to the message
       }
+      // if($(requestsBox).hasClass("customCollapse")){
+      //   requestLine.css("display", "none");
+      // }
       requestLine.append(jsonHTML);
     }
 
@@ -156,7 +186,7 @@
       } else {
         appendObjectToHTML(event, requestLine);
       }
-      requestLine.prependTo(containerErrors).fadeIn(300); //.delay(10000).fadeOut(500); //.delay(5000).fadeOut(500);
+      requestLine.prependTo(containerErrors).fadeIn(300); //.delay(20000).fadeOut(500); //.delay(5000).fadeOut(500);
     }
 
     console.error = function() {
@@ -374,7 +404,11 @@
 
     let script = document.createElement("script");
     script.textContent = "(" + observeDataLayer.toString() + ")();";
-    document.head.appendChild(script);
+    try {
+      document.head.appendChild(script);
+    } catch (e) {// This is for: Refused to execute inline script because it violates the following Content Security Policy directive: "script-src 'unsafe-eval' 'self' 'sha256-nnRzvGsB15enSSxWufoVP+C4WOA6Spq28ybk2OobhJo=' https://static.observablehq.com https://www.google-analytics.com https://www.googleapis.com https://apis.google.com https://js.stripe.com". Either the 'unsafe-inline' keyword, a hash ('sha256-NW48ymmYcooO0dbY1vr0sH+pipddsZUK7g5L8N3COw8='), or a nonce ('nonce-...') is required to enable inline execution.
+      console.error(e);
+    }
     //Get info of clicked elements
     document.onclick = (event) => {
       if (event === undefined) event = window.event;                     // IE hack
@@ -396,12 +430,12 @@
       // console.log(array.reduce(reducer)); //10
       // event.response = path.split("/").reduce(reducer)
       ////path.split("/").forEach(function(part, index) {
-        // const last = index - 1;
-        ////treePath.response.add(index, part)
+      // const last = index - 1;
+      ////treePath.response.add(index, part)
       ////});
       ////treePath["offset"] = {
-        ////x: (mxy[0] - txy[0]),
-        ////y: (mxy[1] - txy[1])
+      ////x: (mxy[0] - txy[0]),
+      ////y: (mxy[1] - txy[1])
       ////};
       ////console.info(treePath);
       console.info(path + " \noffset x:" + (mxy[0] - txy[0]) + ", y:" + (mxy[1] - txy[1]));
@@ -433,6 +467,7 @@
       }
       return [x, y];
     }
+
     //Count number of elements
     // let paragraphCount = document.evaluate("count(//p)", document, null, XPathResult.ANY_TYPE, null);
 
@@ -440,22 +475,26 @@
     // Check if canonical link URI is matching window.location.href
     let canonicalLinkURI, windowURI;
     try {
-      setTimeout(()=>{// This needs to be async and timedout to aovid false positives when website has a redirection
-        if(window.self === window.top) {// We don't want to check this if we are in an Iframe to avoid false positive
-          canonicalLinkURI = $("link[rel='canonical']")
-          canonicalLinkURI = new URL(canonicalLinkURI[0].href);
-          windowURI = new URL(window.location.href);
-          const message = `Canonical url: ${canonicalLinkURI}`
-          if(canonicalLinkURI.pathname === windowURI.pathname){
-            console.info(message);
+      setTimeout(() => {// This needs to be async and timedout to aovid false positives when website has a redirection
+        if (window.self === window.top) {// We don't want to check this if we are in an Iframe to avoid false positive
+          canonicalLinkURI = $("link[rel='canonical']");
+          if (canonicalLinkURI[0] && canonicalLinkURI[0].href) {
+            canonicalLinkURI = new URL(canonicalLinkURI[0].href);
+            windowURI = new URL(window.location.href);
+            const message = `Canonical url: ${canonicalLinkURI}`;
+            if (canonicalLinkURI.pathname === windowURI.pathname) {
+              console.info(message);
+            } else {
+              console.error(message);
+            }
           } else {
-            console.error(message);
+            console.warn("No canonical link found");
           }
         }
-      },1000)
+      }, 2000);
     } catch (e) {
       console.log(e);
-      return
+      return;
     }
   }
 )();
