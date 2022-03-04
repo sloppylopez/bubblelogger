@@ -131,17 +131,17 @@
       GM_addStyle(spinnerCss);
       const errorMessageCss = ".alert {word-break: break-word !important; opacity: 0.95 !important; margin: 0px !important; font-size:13px !important}";
       GM_addStyle(errorMessageCss);
-      const requestsBoxCss = ".requestsBox {max-height: 17% !important; opacity: 0.95 !important; position: fixed !important; top: 17% !important; width: 40% !important; z-index: 99999999 !important; overflow-y: scroll !important; left: -35%;} .string {word-wrap: break-word !important;}";
+      const requestsBoxCss = ".requestsBox { overflow-y: scroll !important; max-height: 88% !important; opacity: 0.95 !important; position: fixed !important; top: 17% !important; width: 40% !important; z-index: 99999999 !important; left: -35%;} .string {word-wrap: break-word !important;}";
       GM_addStyle(requestsBoxCss);
       const svgDivCss = ".svgDiv {width: 100% !important; float: left !important; background-color: black !important} .svgContainer svg {float: right !important}";
       GM_addStyle(svgDivCss);
-      const buttonsDivCss = ".buttonsDiv {display: none; background-color: yellow !important; width: 100% !important; position: relative !important; float: left !important; height: 28px !important;} .buttonsDiv a {width: 33.3% !important; height: 28px !important; float: left !important; text-align: center !important; font-size: 12px !important; border-color: black !important; padding-top: 5px !important}";
+      const buttonsDivCss = ".buttonsDiv {overflow-y: scroll !important;display: none; background-color: yellow !important; width: 100% !important; position: relative !important; float: left !important; height: 28px !important;} .buttonsDiv a {width: 33.3% !important; height: 28px !important; float: left !important; text-align: center !important; font-size: 12px !important; border-color: black !important; padding-top: 5px !important}";
       GM_addStyle(buttonsDivCss);
       // const responsesBoxCss = ".responsesBox {position: fixed !important; right: 0% !important; top: 70% !important; width: 50% !important; z-index: 99999999 !important; overflow-y: scroll !important;}";
       // GM_addStyle(responsesBoxCss);
       const containerErrorsCss = ".containerErrors {display: none; width: 100% !important; position: relative !important; overflow-y: scroll !important; z-index: 99999999 !important;}";
       GM_addStyle(containerErrorsCss);
-      const containerSvgCss = ".svgContainer {cursor: pointer !important;left: 1%; overflow-y: scroll !important; width: 100% !important; float: left !important; opacity: 0.95 !important; background-color: gainsboro !important; position: relative !important; z-index: 99999999 !important;} .svgContainer svg{float: left}";
+      const containerSvgCss = ".svgContainer {cursor: pointer !important;left: 1%; width: 100% !important; float: left !important; opacity: 0.95 !important; background-color: gainsboro !important; position: relative !important; z-index: 99999999 !important;} .svgContainer svg{float: left}";
       GM_addStyle(containerSvgCss);
     }
 
