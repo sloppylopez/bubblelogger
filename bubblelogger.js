@@ -25,10 +25,12 @@
 // https://stackoverflow.com/questions/2631820/how-do-i-ensure-saved-click-coordinates-can-be-reload-to-the-same-place-even-if/2631931#2631931
 // http://jsfiddle.net/luisperezphd/L8pXL/
 // /nl/wlan-access-points/mikrotik/omnitik-5-poe-ac-rbomnitikpg-5hacd-art-rbomnitikpg-5hacd-num-6166159/
+// https://theonlytutorials.com/how-to-make-a-div-movable-draggable/
 //IIFE
 (function() {
     "use strict";
     let id = 0;
+    const isIFrame = (window.self === window.top);
     const $ = window.jQuery;
     const rxjs = window.rxjs;
     window.dataLayer = window.dataLayer || [];
@@ -58,32 +60,51 @@
     spinner.prependTo(containerSvg);
     buttonsDiv.appendTo(containerSvg);
     containerSvg.prependTo(requestsBox);
-    containerErrors.appendTo(requestsBox);
     requestsBox.appendTo($("body"));
+    containerErrors.appendTo($("body"));
+
+    function closeContainerErrorsWithAnimations(closeButtons = false, collapseSpinner = false) {
+      $(containerErrors).addClass("animate__hinge");
+      if (closeButtons) {
+        $(buttonsDiv).css("height", "500px");
+        $(buttonsDiv).addClass("animate__hinge");
+      }
+      setTimeout(() => {
+        $(containerErrors).removeClass("animate__hinge");
+        $(buttonsDiv).removeClass("animate__hinge");
+        $(buttonsDiv).css("height", "");
+      }, 2000);
+      // $(containerErrors).css("display", "none");
+      setTimeout(() => {
+        if (closeButtons) {
+          $(requestsBox).addClass("customCollapse");
+          $(".svgContainer svg").css("float", "right");
+        }
+        $(".containerErrors div").fadeOut("2000");
+        if (collapseSpinner) {
+          $(buttonsDiv).css("display", "none");
+          $(containerErrors).css("display", "none");
+          $(containerSvg).css("left", "1%");
+          if (isIFrame) {
+            $(requestsBox).css("left", "-37%");
+          } else {
+            $(requestsBox).css("left", "-30%");
+          }
+        }
+      }, 1000);
+    }
 
     spinner.on("click", function() {
       if ($(requestsBox).hasClass("customCollapse")) {
+        $(containerErrors).css("display", "block");
         $(requestsBox).removeClass("customCollapse");
         $(".containerErrors div").fadeIn("2000");
-        $(containerSvg).css("left", "1%");
+        $(".svgContainer svg").css("float", "left");
         $(requestsBox).css("left", "0%");
-        $(".svgDiv svg").css("float", "right");
         $(buttonsDiv).css("display", "block");
         $(containerErrors).css("display", "block");
       } else {
-        $(containerErrors).addClass("animate__hinge");
-        setTimeout(() => {
-          $(containerErrors).removeClass("animate__hinge");
-        }, 2000);
-        $(".svgDiv svg").css("float", "left");
-        $(buttonsDiv).css("display", "none");
-        // $(containerErrors).css("display", "none");
-        setTimeout(() => {
-          $(".containerErrors div").fadeOut("2000");
-          $(requestsBox).addClass("customCollapse");
-          $(containerSvg).css("left", "1%");
-          $(requestsBox).css("left", "-37%");
-        }, 1000);
+        closeContainerErrorsWithAnimations(true, true);
       }
       // $(containerErrors).siblings().hide("slow");
     });
@@ -101,7 +122,8 @@
       $(anchors).css("background", "red").css("border-color", "yellow").css("border", "2px");
     });
     closeButton.on("click", function() {
-      $(".containerErrors div").fadeOut("2000");
+      // $(".containerErrors div").fadeOut("2000");
+      closeContainerErrorsWithAnimations();
     });
 
     // responsesBox.appendTo($("body"));
@@ -109,6 +131,14 @@
     function importCSS() {
       // Load remote CSS
       // @see https://github.com/Tampermonkey/tampermonkey/issues/835
+      const overwriteBootrapDismissableButtonCSS = `.alert-dismissible .close {
+                                                      position: absolute !important;
+                                                      top: 0 !important;
+                                                      right: 0 !important;
+                                                      padding: 0.75rem 1.25rem !important;
+                                                      color: inherit !important;
+                                                    }`;
+      GM_addStyle(overwriteBootrapDismissableButtonCSS);
       const bootstrapCss = GM_getResourceText("REMOTE_BOOTSTRAP_CSS");
       GM_addStyle(bootstrapCss);
       const animateCssMin = GM_getResourceText("ANIMATE_CSS_MIN");
@@ -131,17 +161,38 @@
       GM_addStyle(spinnerCss);
       const errorMessageCss = ".alert {word-break: break-word !important; opacity: 0.95 !important; margin: 0px !important; font-size:13px !important}";
       GM_addStyle(errorMessageCss);
-      const requestsBoxCss = ".requestsBox { overflow-y: scroll !important; max-height: 88% !important; opacity: 0.95 !important; position: fixed !important; top: 17% !important; width: 40% !important; z-index: 99999999 !important; left: -37%;} .string {word-wrap: break-word !important;}";
+      const requestsBoxCssTop = (isIFrame) ? "-37%" : "-30%";
+      const requestsBoxCss = `.requestsBox {
+                                overflow-y: scroll !important;
+                                max-height: 88% !important;
+                                opacity: 0.95 !important;
+                                position: fixed !important;
+                                top: 0% !important;
+                                width: 40% !important;
+                                z-index: 99999999
+                                !important;
+                                left: ${requestsBoxCssTop};
+                              } .string {word-wrap: break-word !important;}`;
       GM_addStyle(requestsBoxCss);
-      const svgDivCss = ".svgDiv {width: 100% !important; float: left !important; background-color: black !important} .svgContainer svg {float: right !important}";
+      const svgDivCss = ".svgDiv {width: 100% !important; float: left; background-color: black !important} .svgContainer svg {float: right}";
       GM_addStyle(svgDivCss);
-      const buttonsDivCss = ".buttonsDiv {overflow-y: scroll !important;display: none; background-color: yellow !important; width: 100% !important; position: relative !important; float: left !important; height: 28px !important;} .buttonsDiv a {width: 33.3% !important; height: 28px !important; float: left !important; text-align: center !important; font-size: 12px !important; border-color: black !important; padding-top: 5px !important}";
+      const buttonsDivCss = ".buttonsDiv {overflow-y: scroll !important;display: none; width: 100% !important; position: relative !important; float: left !important;} .buttonsDiv a {width: 33.3% !important; height: 31px !important; float: left !important; text-align: center !important; font-size: 12px !important; border-color: black !important; padding-top: 5px !important}";
       GM_addStyle(buttonsDivCss);
       // const responsesBoxCss = ".responsesBox {position: fixed !important; right: 0% !important; top: 70% !important; width: 50% !important; z-index: 99999999 !important; overflow-y: scroll !important;}";
       // GM_addStyle(responsesBoxCss);
-      const containerErrorsCss = ".containerErrors {display: none; width: 100% !important; position: relative !important; overflow-y: scroll !important; z-index: 99999999 !important;}";
+      const top = (isIFrame) ? "7.5% !important" : "25.5% !important";
+      const containerErrorsCss = `.containerErrors {
+                                      display: none;
+                                      max-height: 752px !important;
+                                      width: 100% !important;
+                                      top: ${top};
+                                      width: 40% !important;
+                                      position: fixed !important;
+                                      overflow-y: scroll !important;
+                                      z-index: 99999999 !important;
+                                   }`;
       GM_addStyle(containerErrorsCss);
-      const containerSvgCss = ".svgContainer {cursor: pointer !important;left: 1%; z-index: 99999999 !important;} .svgContainer svg{float: left}";
+      const containerSvgCss = ".svgContainer {cursor: pointer !important;left: 1%; z-index: 99999999 !important;} .svgContainer svg{float: right}";
       GM_addStyle(containerSvgCss);
     }
 
