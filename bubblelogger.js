@@ -26,7 +26,7 @@
 // https://stackoverflow.com/questions/2631820/how-do-i-ensure-saved-click-coordinates-can-be-reload-to-the-same-place-even-if/2631931#2631931
 // http://jsfiddle.net/luisperezphd/L8pXL/
 // /nl/wlan-access-points/mikrotik/omnitik-5-poe-ac-rbomnitikpg-5hacd-art-rbomnitikpg-5hacd-num-6166159/
-// https://theonlytutorials.com/how-to-make-a-div-movable-draggable/ .
+// https://theonlytutorials.com/how-to-make-a-div-movable-draggable/
 //IIFE
 (function() {
     "use strict";
@@ -50,9 +50,9 @@
     // const responsesBox = $("<div class=\"responsesBox\">");
     const containerSvg = $("<div id=\"svgContainer\" class=\"svgContainer\">");
     const containerErrors = $("<div id=\"containerErrors\" class=\"containerErrors animate__animated\">");
-    const hrefButton = $("<a class=\"btn btn-primary\" role=\"button\">href</a>");
-    const refreshButton = $("<a class=\"btn btn-primary\" onclick=\"window.location.reload(true)\" role=\"button\">refresh</a>");
-    const closeButton = $("<a class=\"btn btn-danger\" role=\"button\">X</a>");
+    const hrefButton = $("<a class=\"btn btn-primary\" style=\"background-image: none !important;\" role=\"button\">href</a>");
+    const refreshButton = $("<a class=\"btn btn-primary\" style=\"background-image: none !important;\" onclick=\"window.location.reload(true)\" role=\"button\">refresh</a>");
+    const closeButton = $("<a class=\"btn btn-danger\" style=\"background-image: none !important;\" role=\"button\">X</a>");
     const buttonsDiv = $("<div class=\"buttonsDiv\"></div>");
     refreshButton.prependTo(buttonsDiv);
     hrefButton.prependTo(buttonsDiv);
@@ -154,7 +154,8 @@
                             .renderjson .key    { color: darkblue; }
                             .renderjson .keyword { color: blue; }
                             .renderjson .object.syntax { color: lightseagreen; }
-                            .renderjson .array.syntax  { color: orange; }`;
+                            .renderjson .array.syntax  { color: orange; }
+                            .containerErrors pre  { padding: 0 !important; background: no-repeat !important}`;
       GM_addStyle(jsonViewerCss);
       const customCollapse = ".customCollapse {float: right !important}";
       GM_addStyle(customCollapse);
@@ -215,9 +216,9 @@
       jsonHTML = renderjson(response);
       if (event.url) {
         url = event.url.replace(url.origin, "");
-        requestLine.append("<p style=\"word-break: break-word;\">" + " <a href=\"" + event.url + "\" class=\"alert-link\">" + url.substring(1, url.length) + "<a/> <br/>" + (event.method ? event.method.toUpperCase() : "") + " " + event.statusCode + " " + event.duration + "<p\>"); // adding the error response to the message
+        requestLine.append("<p style=\"word-break: break-word;font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji !important; font-size: 13px !important\">" + " <a href=\"" + event.url + "\" class=\"alert-link\">" + url.substring(1, url.length) + "<a/> <br/>" + (event.method ? event.method.toUpperCase() : "") + " " + event.statusCode + " " + event.duration + "<p\>"); // adding the error response to the message
       } else {
-        requestLine.append("<p style=\"word-break: break-word;\">" + event[0] + "<p\>"); // adding the error response to the message
+        requestLine.append("<p style=\"word-break: break-word;font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji !important; font-size: 13px !important\">" + event[0] + "<p\>"); // adding the error response to the message
       }
       // if($(requestsBox).hasClass("customCollapse")){
       //   requestLine.css("display", "none");
