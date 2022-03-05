@@ -138,6 +138,7 @@
                                                       right: 0 !important;
                                                       padding: 0.75rem 1.25rem !important;
                                                       color: inherit !important;
+                                                      width: 40px! important;
                                                     }`;
       GM_addStyle(overwriteBootrapDismissableButtonCSS);
       const bootstrapCss = GM_getResourceText("REMOTE_BOOTSTRAP_CSS");
