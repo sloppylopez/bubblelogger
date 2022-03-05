@@ -26,7 +26,7 @@
 // https://stackoverflow.com/questions/2631820/how-do-i-ensure-saved-click-coordinates-can-be-reload-to-the-same-place-even-if/2631931#2631931
 // http://jsfiddle.net/luisperezphd/L8pXL/
 // /nl/wlan-access-points/mikrotik/omnitik-5-poe-ac-rbomnitikpg-5hacd-art-rbomnitikpg-5hacd-num-6166159/
-// https://theonlytutorials.com/how-to-make-a-div-movable-draggable/
+// https://theonlytutorials.com/how-to-make-a-div-movable-draggable/ .
 //IIFE
 (function() {
     "use strict";
