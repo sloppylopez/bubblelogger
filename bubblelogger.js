@@ -5,6 +5,8 @@
 // @require      https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js
 // @require      https://cdn.jsdelivr.net/npm/renderjson@1.4.0/renderjson.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/rxjs/8.0.0-alpha.2/rxjs.umd.min.js
+// @require      https://cdn.jsdelivr.net/npm/d3@7.3.0/dist/d3.min.js
+// @run-at       document-end
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @license      MIT
@@ -17,28 +19,35 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getResourceText
 // @grant        GM_addStyle
-// @grant        GM_notification
 // @grant        unsafeWindow
 // ==/UserScript==
-//Info: https://sourceforge.net/p/greasemonkey/wiki/unsafeWindow/
-// https://benjamine.github.io/jsondiffpatch/demo/index.html
-// https://abodelot.github.io/jquery.json-viewer/
-// https://programming.mediatagtw.com/article/tampermonkey+unsafewindow
-// https://stackoverflow.com/questions/2631820/how-do-i-ensure-saved-click-coordinates-can-be-reload-to-the-same-place-even-if/2631931#2631931
-// http://jsfiddle.net/luisperezphd/L8pXL/
-// /nl/wlan-access-points/mikrotik/omnitik-5-poe-ac-rbomnitikpg-5hacd-art-rbomnitikpg-5hacd-num-6166159/
-// https://theonlytutorials.com/how-to-make-a-div-movable-draggable/ Missing feature: DRAGGABLE
-// https://gist.github.com/GHolk/699c7b42d02e9dfd1c8f9af011f1eef1 Missing feature: REPL
-//IIFE
+// Info: https://sourceforge.net/p/greasemonkey/wiki/unsafeWindow/
+//       https://benjamine.github.io/jsondiffpatch/demo/index.html
+//       https://abodelot.github.io/jquery.json-viewer/
+//       https://programming.mediatagtw.com/article/tampermonkey+unsafewindow
+//       https://stackoverflow.com/questions/2631820/how-do-i-ensure-saved-click-coordinates-can-be-reload-to-the-same-place-even-if/2631931#2631931
+//       http://jsfiddle.net/luisperezphd/L8pXL/
+//       /nl/wlan-access-points/mikrotik/omnitik-5-poe-ac-rbomnitikpg-5hacd-art-rbomnitikpg-5hacd-num-6166159/
+//       https://theonlytutorials.com/how-to-make-a-div-movable-draggable/ Missing feature: DRAGGABLE
+//       https://wiki.greasespot.net/Content_Script_Injection
+// IIFE
 (function() {
     //Init
     "use strict";
     let id = 0;
+    let masterId = 0;
+    let scrolling = false;
     let stats = [];
     let timeoutId = null;
     let canonicalLinkURI, windowURI;
     let firstRun = true;
-    const isIFrame = (window.self === window.top);
+    const constants = {
+      GTM: "GTM",
+      ENV: "ENV"
+    };
+    const { GTM, ENV } = constants;
+    const cache = [];
+    const isIframe = (window.self === window.top);
     const $ = window.jQuery;
     const rxjs = window.rxjs;
     window.dataLayer = window.dataLayer || [];
@@ -63,7 +72,7 @@
                                                       color: inherit !important;
                                                       width: 40px !important;
                                                       box-shadow: none !important;
-                                                      font-size: 1rem;
+                                                      font-size: 1.5rem !important;
                                                     }`;
       GM_addStyle(overwriteBootrapDismissableButtonCSS);
       const bootstrapCss = GM_getResourceText("REMOTE_BOOTSTRAP_CSS");
@@ -89,31 +98,35 @@
       GM_addStyle(spinnerCss);
       const errorMessageCss = ".alert {word-break: break-word !important; opacity: 0.95 !important; margin: 0px !important; font-size:13px !important}";
       GM_addStyle(errorMessageCss);
-      const requestsBoxCssTop = (isIFrame) ? "-37%" : "-30%";
+      const requestsBoxCssWidth = (isIframe) ? "388px" : "351px";
       const requestsBoxCss = `.requestsBox {
                                 overflow-y: scroll !important;
                                 max-height: 88% !important;
+                                width: ${requestsBoxCssWidth} !important;
                                 position: fixed !important;
                                 top: 0% !important;
-                                width: 40% !important;
                                 z-index: 99999999
                                 !important;
-                                left: ${requestsBoxCssTop};
+                                left: 0;
                               } .string {word-wrap: break-word !important;}`;
       GM_addStyle(requestsBoxCss);
-      const svgDivCss = ".svgDiv {width: 100% !important; float: left; background-color: black !important} .svgContainer svg {float: right}";
-      GM_addStyle(svgDivCss);
+      const spinnerDivCss = `.spinnerDiv {
+                                      width: 10% !important;
+                                      float: left;
+                                      background-color: #1f1f22 !important
+                              }`;
+      GM_addStyle(spinnerDivCss);
       const buttonsDivCss = ".buttonsDiv {overflow-y: scroll !important;display: none; width: 100% !important; position: relative !important; float: left !important;} .buttonsDiv a {width: 33.3% !important; height: 31px !important; float: left !important; text-align: center !important; font-size: 12px !important; border-color: black !important; padding-top: 5px !important}";
       GM_addStyle(buttonsDivCss);
       // const responsesBoxCss = ".responsesBox {position: fixed !important; right: 0% !important; top: 70% !important; width: 50% !important; z-index: 99999999 !important; overflow-y: scroll !important;}";
       // GM_addStyle(responsesBoxCss);
-      const top = (isIFrame) ? "7.5% !important" : "25.5% !important";
+      const top = (isIframe) ? "7.5%" : "26%";
+      const containerErrorsCSSWidth = (isIframe) ? "388px" : "351px";
       const containerErrorsCss = `.containerErrors {
                                       display: none;
                                       max-height: 752px !important;
-                                      width: 100% !important;
-                                      top: ${top};
-                                      width: 40% !important;
+                                      width: ${containerErrorsCSSWidth} !important;
+                                      top: ${top} !important;
                                       position: fixed !important;
                                       overflow-y: scroll !important;
                                       z-index: 99999999 !important;
@@ -122,15 +135,38 @@
                                      font-style: normal !important;
                                    }`;
       GM_addStyle(containerErrorsCss);
-      const containerSvgCss = ".svgContainer {cursor: pointer !important;left: 1%; z-index: 99999999 !important;} .svgContainer svg{float: right}";
+      const containerSvgCss = `.svgContainer {
+                                    cursor: pointer !important;
+                                    left: 1%;
+                                    z-index: 99999999 !important;
+                               }
+                               .svgContainer svg{
+                                    float: left
+                               }`;
       GM_addStyle(containerSvgCss);
       const objectMessagePCss = ".objectMessageP {word-break: break-word;font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji !important; font-size: 13px !important}";
       GM_addStyle(objectMessagePCss);
+      const width = (isIframe) ? "90%" : "90%";
+      const replDivCss = `.replDiv {
+                                  display: none;
+                                  height: 50px !important;
+                                  width: ${width} !important;
+                                  float: left !important
+                          }
+                          .replDiv input {
+                                  background-color: #1f1f22 !important;
+                                  height: 100% !important;
+                                  width: 100% !important;
+                                  font-size: 18px !important;
+                                  border: 0 !important;
+                          }`;
+      GM_addStyle(replDivCss);
     })();
 
     //Create reference to elements
-    const spinner = $("<div class=\"svgDiv\"><svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" style=\"margin: auto; background: none; display: block; shape-rendering: crispedges; animation-play-state: running; animation-delay: 0s;\" width=\"50px\" height=\"50px\" viewBox=\"0 0 100 100\" preserveAspectRatio=\"xMidYMid\">  <g style=\"animation-play-state: running; animation-delay: 0s;\">    <circle cx=\"60\" cy=\"50\" r=\"4\" fill=\"#ffffff\" style=\"animation-play-state: running; animation-delay: 0s;\">      <animate attributeName=\"cx\" repeatCount=\"indefinite\" dur=\"1s\" values=\"95;35\" keyTimes=\"0;1\" begin=\"-0.67s\" style=\"animation-play-state: running; animation-delay: 0s;\"></animate>      <animate attributeName=\"fill-opacity\" repeatCount=\"indefinite\" dur=\"1s\" values=\"0;1;1\" keyTimes=\"0;0.2;1\" begin=\"-0.67s\" style=\"animation-play-state: running; animation-delay: 0s;\"></animate>    </circle>    <circle cx=\"60\" cy=\"50\" r=\"4\" fill=\"#ffffff\" style=\"animation-play-state: running; animation-delay: 0s;\">      <animate attributeName=\"cx\" repeatCount=\"indefinite\" dur=\"1s\" values=\"95;35\" keyTimes=\"0;1\" begin=\"-0.33s\" style=\"animation-play-state: running; animation-delay: 0s;\"></animate>      <animate attributeName=\"fill-opacity\" repeatCount=\"indefinite\" dur=\"1s\" values=\"0;1;1\" keyTimes=\"0;0.2;1\" begin=\"-0.33s\" style=\"animation-play-state: running; animation-delay: 0s;\"></animate>    </circle>    <circle cx=\"60\" cy=\"50\" r=\"4\" fill=\"#ffffff\" style=\"animation-play-state: running; animation-delay: 0s;\">      <animate attributeName=\"cx\" repeatCount=\"indefinite\" dur=\"1s\" values=\"95;35\" keyTimes=\"0;1\" begin=\"0s\" style=\"animation-play-state: running; animation-delay: 0s;\"></animate>      <animate attributeName=\"fill-opacity\" repeatCount=\"indefinite\" dur=\"1s\" values=\"0;1;1\" keyTimes=\"0;0.2;1\" begin=\"0s\" style=\"animation-play-state: running; animation-delay: 0s;\"></animate>    </circle>  </g><g transform=\"translate(-15 0)\" style=\"animation-play-state: running; animation-delay: 0s;\">  <path d=\"M50 50L20 50A30 30 0 0 0 80 50Z\" fill=\"#005bbf\" transform=\"rotate(90 50 50)\" style=\"animation-play-state: running; animation-delay: 0s;\"></path>  <path d=\"M50 50L20 50A30 30 0 0 0 80 50Z\" fill=\"#005bbf\" style=\"animation-play-state: running; animation-delay: 0s;\">    <animateTransform attributeName=\"transform\" type=\"rotate\" repeatCount=\"indefinite\" dur=\"1s\" values=\"0 50 50;45 50 50;0 50 50\" keyTimes=\"0;0.5;1\" style=\"animation-play-state: running; animation-delay: 0s;\"></animateTransform>  </path>  <path d=\"M50 50L20 50A30 30 0 0 1 80 50Z\" fill=\"#005bbf\" style=\"animation-play-state: running; animation-delay: 0s;\">    <animateTransform attributeName=\"transform\" type=\"rotate\" repeatCount=\"indefinite\" dur=\"1s\" values=\"0 50 50;-45 50 50;0 50 50\" keyTimes=\"0;0.5;1\" style=\"animation-play-state: running; animation-delay: 0s;\"></animateTransform>  </path></g>  <!-- [ldio] generated by https://loading.io/ --></svg></div>");
-    const requestsBox = $("<div id=\"requestsBox\" class=\"requestsBox animate__animated animate__rollIn customCollapse\">");
+    const spinner = $("<div class=\"spinnerDiv\"><svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" style=\"margin: auto; background: none; display: block; shape-rendering: crispedges; animation-play-state: running; animation-delay: 0s;\" width=\"50px\" height=\"50px\" viewBox=\"0 0 100 100\" preserveAspectRatio=\"xMidYMid\">  <g style=\"animation-play-state: running; animation-delay: 0s;\">    <circle cx=\"60\" cy=\"50\" r=\"4\" fill=\"#ffffff\" style=\"animation-play-state: running; animation-delay: 0s;\">      <animate attributeName=\"cx\" repeatCount=\"indefinite\" dur=\"1s\" values=\"95;35\" keyTimes=\"0;1\" begin=\"-0.67s\" style=\"animation-play-state: running; animation-delay: 0s;\"></animate>      <animate attributeName=\"fill-opacity\" repeatCount=\"indefinite\" dur=\"1s\" values=\"0;1;1\" keyTimes=\"0;0.2;1\" begin=\"-0.67s\" style=\"animation-play-state: running; animation-delay: 0s;\"></animate>    </circle>    <circle cx=\"60\" cy=\"50\" r=\"4\" fill=\"#ffffff\" style=\"animation-play-state: running; animation-delay: 0s;\">      <animate attributeName=\"cx\" repeatCount=\"indefinite\" dur=\"1s\" values=\"95;35\" keyTimes=\"0;1\" begin=\"-0.33s\" style=\"animation-play-state: running; animation-delay: 0s;\"></animate>      <animate attributeName=\"fill-opacity\" repeatCount=\"indefinite\" dur=\"1s\" values=\"0;1;1\" keyTimes=\"0;0.2;1\" begin=\"-0.33s\" style=\"animation-play-state: running; animation-delay: 0s;\"></animate>    </circle>    <circle cx=\"60\" cy=\"50\" r=\"4\" fill=\"#ffffff\" style=\"animation-play-state: running; animation-delay: 0s;\">      <animate attributeName=\"cx\" repeatCount=\"indefinite\" dur=\"1s\" values=\"95;35\" keyTimes=\"0;1\" begin=\"0s\" style=\"animation-play-state: running; animation-delay: 0s;\"></animate>      <animate attributeName=\"fill-opacity\" repeatCount=\"indefinite\" dur=\"1s\" values=\"0;1;1\" keyTimes=\"0;0.2;1\" begin=\"0s\" style=\"animation-play-state: running; animation-delay: 0s;\"></animate>    </circle>  </g><g transform=\"translate(-15 0)\" style=\"animation-play-state: running; animation-delay: 0s;\">  <path d=\"M50 50L20 50A30 30 0 0 0 80 50Z\" fill=\"#005bbf\" transform=\"rotate(90 50 50)\" style=\"animation-play-state: running; animation-delay: 0s;\"></path>  <path d=\"M50 50L20 50A30 30 0 0 0 80 50Z\" fill=\"#005bbf\" style=\"animation-play-state: running; animation-delay: 0s;\">    <animateTransform attributeName=\"transform\" type=\"rotate\" repeatCount=\"indefinite\" dur=\"1s\" values=\"0 50 50;45 50 50;0 50 50\" keyTimes=\"0;0.5;1\" style=\"animation-play-state: running; animation-delay: 0s;\"></animateTransform>  </path>  <path d=\"M50 50L20 50A30 30 0 0 1 80 50Z\" fill=\"#005bbf\" style=\"animation-play-state: running; animation-delay: 0s;\">    <animateTransform attributeName=\"transform\" type=\"rotate\" repeatCount=\"indefinite\" dur=\"1s\" values=\"0 50 50;-45 50 50;0 50 50\" keyTimes=\"0;0.5;1\" style=\"animation-play-state: running; animation-delay: 0s;\"></animateTransform>  </path></g>  <!-- [ldio] generated by https://loading.io/ --></svg></div>");
+    const replDiv = $("<div id=\"replDiv\" class=\"replDiv\"><input type=\"text\" placeholder=\"REPL: alert('Happy Hacking!')\" ></input></div>");
+    const requestsBox = $("<div id=\"requestsBox\" draggable = \"true\" class=\"requestsBox animate__animated animate__rollIn customCollapse\">");
     // const responsesBox = $("<div class=\"responsesBox\">");
     const containerSvg = $("<div id=\"svgContainer\" class=\"svgContainer\">");
     const containerErrors = $("<div id=\"containerErrors\" class=\"containerErrors animate__animated\">");
@@ -143,10 +179,28 @@
     closeButton.prependTo(buttonsDiv);
 
     spinner.prependTo(containerSvg);
+    replDiv.on("click", repl);
+    replDiv.appendTo(containerSvg);
     buttonsDiv.appendTo(containerSvg);
     containerSvg.prependTo(requestsBox);
     requestsBox.appendTo($("body"));
     containerErrors.appendTo($("body"));
+
+    //Make element Draggable W.I.P
+    requestsBox[0].ondragstart = (event) => {
+      event.dataTransfer.setData("text", event.target.id);
+    };
+    const body = $("body");
+    if (body) {
+      body.ondrop = (event) => {
+        event.preventDefault();
+        let data = event.dataTransfer.getData("text");
+        event.target.appendChild(document.getElementById(data));
+      };
+      body.ondragover = (event) => {
+        event.preventDefault();
+      };
+    }
 
     //Handcraft 'out' animation for requestsBox(This is not easy to modify)
     function closeContainerErrorsWithAnimations(closeButtons = false, collapseSpinner = false) {
@@ -163,18 +217,12 @@
       setTimeout(() => {
         if (closeButtons) {
           $(requestsBox).addClass("customCollapse");
-          $(".svgContainer svg").css("float", "right");
+          $(".replDiv").css("display", "none");
         }
         $(".containerErrors div").fadeOut("2000");
         if (collapseSpinner) {
           $(buttonsDiv).css("display", "none");
           $(containerErrors).css("display", "none");
-          $(containerSvg).css("left", "1%");
-          if (isIFrame) {
-            $(requestsBox).css("left", "-37%");
-          } else {
-            $(requestsBox).css("left", "-30%");
-          }
         }
       }, 1000);
     }
@@ -186,7 +234,7 @@
         $(containerErrors).css("display", "block");
         $(requestsBox).removeClass("customCollapse");
         $(".containerErrors div").fadeIn("2000");
-        $(".svgContainer svg").css("float", "left");
+        $(".replDiv").css("display", "block");
         $(requestsBox).css("left", "0%");
         $(buttonsDiv).css("display", "block");
         $(containerErrors).css("display", "block");
@@ -195,7 +243,7 @@
       }
     });
     // Add close button animation
-    closeButton.on("click", function() {
+    closeButton.on("click", () => {
       closeContainerErrorsWithAnimations();
     });
     // Add HREF button functionality
@@ -209,73 +257,28 @@
         //   $(button).css("border", "2px");
         // }
       });
-      $(anchors).css("background", "red").css("border-color", "yellow").css("border", "2px");
-    });
-
-    //This method needs complex logic since every event needs to be rendered differently in the DOM(event, error, info, env_variable, GTM object), TODO NEEDS REFACTOR
-    function appendObjectToHTML(event, alertLine, type = "event") {
-      let url, jsonTreeElement, response;
       try {
-        url = new URL(event.url);
-      } catch (e) {//Sometimes event.url will not have `origin` attribute
-        url = event.url || undefined;
-      }
-      try {
-        if (type === "GTM" || type === "ENV") {
-          jsonTreeElement = renderjson(event[type]);
-        } else {
-          response = JSON.parse(event.response);
-          jsonTreeElement = renderjson(response);
-        }
+        // d3.selectAll(anchors).style("background-color", function() {
+        //   return "hsl(" + Math.random() * 360 + ",100%,50%)";
+        // });
+        d3.selectAll(anchors).style("background-color", function(d, i) {
+          return i % 2 ? "red" : "green";
+        });
+        d3.select("body").transition()
+          .style("background-color", "black");
+        d3.selectAll(anchors).transition()
+          .duration(750)
+          .delay(function(d, i) {
+            return i * 10;
+          })
+          .attr("r", function(d) {
+            return Math.sqrt(d * 1);
+          });
       } catch (e) {
-        // console.log(e); //Sometimes we get malformed JSON
-        try {
-          response = JSON.parse(JSON.stringify({ response: event.response }));
-          jsonTreeElement = renderjson(response);
-        } catch (e) {
-          console.log(e);
-        }
+        console.error(e);
       }
-      if (url) {
-        url = event.url.replace(url.origin, "");
-        alertLine.append("<p class=\"objectMessageP\">" + url.substring(1, url.length) + "<a/> <br/>" + (event.method ? event.method.toUpperCase() : "") + " " + event.statusCode + " " + event.duration + "<p\>"); // adding the error response to the message
-      } else {
-        if (type === "GTM" || type === "ENV") {
-          alertLine.append("<p class=\"objectMessageP\">" + type + ":<p\>"); // adding the GTM info response to the message
-        } else {
-          alertLine.append("<p class=\"objectMessageP\">" + event[0] + "<p\>"); // adding the error response to the message
-        }
-      }
-      alertLine.append(jsonTreeElement);
-      if (type === "GTM") {
-        alertLine.attr("data-object", JSON.stringify(event[type]));
-        // alertLine.data("gtm-object", JSON.stringify(event[type]));
-      }
-    }
-
-    //Render events into HTML
-    function renderEventInHTML(event, alertType) {
-      alertType = bubbleStates.includes(alertType) ? alertType : "primary";
-      const newId = id++;
-      const requestLine = $("<div id=\"requestId-" + newId + "\" class=\"alert alert-dismissible fade show\" style=\"display: none;\">");
-      // const responseLine = $("<div id=\"responseId-" + newId + "\" style=\"display: block;\">");
-      requestLine.addClass("alert-" + alertType);
-      const close = $("<button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\">&times</button>");
-      requestLine.append(close);
-      if (typeof event === "string") {
-        requestLine.append(event);
-      } else {
-        //TODO
-        if (event.GTM) {
-          appendObjectToHTML(event, requestLine, "GTM");
-        } else if (event.ENV) {
-          appendObjectToHTML(event, requestLine, "ENV");
-        } else {
-          appendObjectToHTML(event, requestLine);
-        }
-      }
-      requestLine.prependTo(containerErrors).fadeIn(300); //.delay(20000).fadeOut(500); //.delay(5000).fadeOut(500);
-    }
+      // $(anchors).css("background", "red").css("border-color", "yellow").css("border", "2px");
+    });
 
     //Hijack error
     console.error = function() {
@@ -301,8 +304,38 @@
       // new & array data
       console.infos.push(Array.from(arguments));
     };
-    //Window Load Event Handler
-    window.addEventListener("load", function() {
+
+    //Handler for window unhandledrejection, rejectionhandled, error
+    function logEvent(errorEvent, type) {
+      let error = undefined;
+      try {
+        if (errorEvent.reason) {
+          error = errorEvent.reason.stack || errorEvent.reason.message;
+        } else {
+          error = errorEvent.error || errorEvent.message || JSON.stringify(errorEvent);
+        }
+      } catch (e) {
+        console.log(e);
+      }
+      console.error(`window.${type}: ${error}`);
+    }
+
+    // this is only to distinguish http errors by status, cannot be used to distinguish every single event we might get
+    function sendToConsole(stats) {
+      stats.forEach((stat) => {
+        if (stat.statusCode >= 200 && stat.statusCode < 400) {
+          console.info(stat);
+        } else if (stat.statusCode === 404) {
+          console.warn(stat);
+        } else {
+          console.error(stat);
+        }
+      });
+    }
+    //TODO, We need to return promises here to be able to syncronize the event ids
+    //Add custom Event listener to window, XMLHttpRequest
+    function addCustomEventListeners(id) {
+      let timer = null;
       if (window) {
         let _onerror = function(event, url, lineNo, columnNo, error) {
           let message = [];
@@ -318,7 +351,8 @@
             alert("Script Error: See Browser Console for Detail");
           } else {
             message = [
-              "Message: " + eventMessage,
+              id,
+              " Message: " + eventMessage,
               "URL: " + url,
               "Line: " + lineNo,
               "Column: " + columnNo,
@@ -326,12 +360,8 @@
             ].join(" - ");
             console.error(message);
           }
-          GM_notification("text", "title", "https://store-images.s-microsoft.com/image/apps.32031.13510798887630003.b4c5c861-c9de-4301-99ce-5af68bf21fd1.ba559483-bc2c-4eb9-a17e-c302009b2690?w=180&h=180&q=60", () => {
-            console.log("click");
-          });
           return false;
         };
-        //Window Uncaught Errors Handler
         window.onerror = function() {
           let args = Array.prototype.slice.call(arguments);
           if (_onerror) {
@@ -339,111 +369,106 @@
           }
           return false;
         };
-      }
-
-      //Handler for window unhandledrejection, rejectionhandled, error
-      function logEvent(errorEvent, type) {
-        let error = undefined;
-        try {
-          if (errorEvent.reason) {
-            error = errorEvent.reason.stack || errorEvent.reason.message;
-          } else {
-            error = errorEvent.error || errorEvent.message || JSON.stringify(errorEvent);
+        $.error = function(message) {
+          console.error("jQuery: " + message);
+        };
+        window.onscroll = function(event) {
+          event.preventDefault();
+          event.stopPropagation();
+          if(!scrolling){
+            scrolling = true;
+            masterId++;
           }
-        } catch (e) {
-          console.log(e);
-        }
-        console.error(`window.${type}: ${error}`);
-      }
-
-      window.addEventListener("unhandledrejection", function(errorEvent) {
-        logEvent(errorEvent, "unhandledrejection");
-      });
-      window.addEventListener("rejectionhandled", function(errorEvent) {
-        logEvent(errorEvent, "rejectionhandled");
-      });
-      window.addEventListener("error", function(errorEvent) {
-        logEvent(errorEvent, "error");
-      });
-      $.error = function(message) {
-        console.error("jQuery: " + message);
-      };
-
-      // XHR Open
-      XMLHttpRequest.prototype.open = function(method, url, async, user, pass) {
-        this._url = url;
-        open.call(this, method, url, async, user, pass);
-      };
-
-      // this is only to distinguish http errors by status, cannot be used to distinguish every single event we might get
-      function sendToConsole(event, stats) {
-        stats.forEach((stat) => {
-          if (stat.statusCode >= 200 && stat.statusCode < 400) {
-            console.info(stat);
-          } else if (stat.statusCode === 404) {
-            console.warn(stat);
-          } else {
-            console.error(stat);
+          if(timer !== null) {
+            clearTimeout(timer);
           }
+          timer = setTimeout(function() {
+            scrolling = false;
+          }, 1000);
+
+          // if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight) {
+          //   // you're at the bottom of the page
+          // }
+        };
+        window.addEventListener("unhandledrejection", function(errorEvent) {
+          logEvent(errorEvent, "unhandledrejection");
         });
-      }
+        window.addEventListener("rejectionhandled", function(errorEvent) {
+          logEvent(errorEvent, "rejectionhandled");
+        });
+        window.addEventListener("error", function(errorEvent) {
+          logEvent(errorEvent, "error");
+        });
+        XMLHttpRequest.prototype.open = function(method, url, async, user, pass) {
+          this._url = url;
+          this._method = method;
+          open.call(this, method, url, async, user, pass);
+        };
+        XMLHttpRequest.prototype.send = function(data) {
+          let self = this;
+          let start;
+          let oldOnReadyStateChange;
+          let url = this._url;
+          let method = this._method;
 
-      // XHR Send
-      XMLHttpRequest.prototype.send = function(data) {
-        let self = this;
-        let start;
-        let oldOnReadyStateChange;
-        let url = this._url;
-
-        function onReadyStateChange(event) {
-          //Info: Log all you need from event
-          if (self.readyState === 4 /* complete */) {
-            let time = new Date() - start;
-            stats.push({
-              url: url,
-              duration: time + "ms",
-              statusCode: ["undefined", "null", "", null, undefined].includes(event.currentTarget.status) ? "unknown" : event.currentTarget.status,
-              response: ["undefined", "null", "", null, undefined].includes(event.currentTarget.response) ? "unknown" : event.currentTarget.response,
-              method: event.currentTarget["nr@context"] && event.currentTarget["nr@context"].params ? event.currentTarget["nr@context"].params.method : "unknown"
-            });
-            if (!timeoutId) {
-              timeoutId = window.setTimeout(function() {
-                sendToConsole(event, stats);
-                timeoutId = null;
-                stats = [];
-              }, 2000);
+          function onReadyStateChange(event) {
+            //Info: Log all you need from event
+            if (self.readyState === 4 /* complete */) {
+              let time = new Date() - start;
+              stats.push({
+                url: url,
+                id: masterId,
+                duration: time + "ms",
+                statusCode: ["undefined", "null", "", null, undefined].includes(event.currentTarget.status) ? "unknown" : event.currentTarget.status,
+                response: ["undefined", "null", "", null, undefined].includes(event.currentTarget.response) ? "unknown" : event.currentTarget.response,
+                method: event.currentTarget["nr@context"] && event.currentTarget["nr@context"].params ? event.currentTarget["nr@context"].params.method : method,
+              });
+              sendToConsole(stats);
+              timeoutId = null;
+              stats = [];
+            }
+            if (oldOnReadyStateChange) {
+              oldOnReadyStateChange();
             }
           }
-          if (oldOnReadyStateChange) {
-            oldOnReadyStateChange();
+          if (!this.noIntercept) {
+            start = new Date();
+            if (this.addEventListener) {
+              this.addEventListener("readystatechange", onReadyStateChange, false);
+            } else {
+              oldOnReadyStateChange = this.onreadystatechange;
+              this.onreadystatechange = onReadyStateChange;
+            }
           }
-        }
+          send.call(this, data);
+        };
+      }
+    }
 
-        if (!this.noIntercept) {
-          start = new Date();
-          if (this.addEventListener) {
-            this.addEventListener("readystatechange", onReadyStateChange, false);
-          } else {
-            oldOnReadyStateChange = this.onreadystatechange;
-            this.onreadystatechange = onReadyStateChange;
-          }
-        }
-        send.call(this, data);
-      };
+    //Window Load Event Handler
+    window.addEventListener("load", () => {
+      addCustomEventListeners(masterId);
     });
 
+    //Count number of elements
+    // let paragraphCount = document.evaluate("count(//p)", document, null, XPathResult.ANY_TYPE, null);
+    // console.info("This document contains " + paragraphCount.numberValue + " paragraph elements");
+
     //Get Xpath and XY Coordinates of any clicked element
-    document.onclick = (event) => {
-      event.stopImmediatePropagation();
+    document.onclick = async (event) => {
+      // event.stopImmediatePropagation();
+      // event.preventDefault();
       if (event === undefined) event = window.event;                     // IE hack
       let target = "target" in event ? event.target : event.srcElement; // another IE hack
       let root = document.compatMode === "CSS1Compat" ? document.documentElement : document.body;
       let mxy = [event.clientX + root.scrollLeft, event.clientY + root.scrollTop];
       let path = getPathTo(target);
-      if (path.includes("requestsBox") || path.includes("svgContainer") || path.includes("containerErrors") || path.includes("requestId-")) return;
+      if (path.includes("requestsBox") || path.includes("svgContainer") || path.includes("containerErrors") || path.includes("requestId-") || path.includes("replDiv")) return;//We don't want to acknowledge the click we do in our own terminal
+      masterId++;
       let txy = getPageXY(target);
-      console.info(path + " \noffset x:" + (mxy[0] - txy[0]) + ", y:" + (mxy[1] - txy[1]));
-      getDataFromWindow();
+      console.info(masterId + " - " + path + " <br/>offset x:" + (mxy[0] - txy[0]) + ", y:" + (mxy[1] - txy[1]));
+      await addCustomEventListeners(masterId);
+      await getDataFromWindow(masterId);
     };
 
     function getPathTo(element) {
@@ -452,6 +477,9 @@
       if (element === document.body)
         return element.tagName;
       let ix = 0;
+      if(!element.parentNode){
+        return "";
+      }
       let siblings = element.parentNode.childNodes;
       for (let i = 0; i < siblings.length; i++) {
         let sibling = siblings[i];
@@ -472,18 +500,14 @@
       return [x, y];
     }
 
-    //Count number of elements
-    // let paragraphCount = document.evaluate("count(//p)", document, null, XPathResult.ANY_TYPE, null);
-    // console.info("This document contains " + paragraphCount.numberValue + " paragraph elements");
-
     // Check if canonical link URI is matching window.location.href
-    function checkCanonicalLink() {
-      if (window.self === window.top) {// We don't want to check this if we are in an Iframe to avoid false positive
+    function checkCanonicalLink(id) {
+      if (isIframe) {// We don't want to check this if we are in an Iframe to avoid false positive
         canonicalLinkURI = $("link[rel='canonical']");
         if (canonicalLinkURI[0] && canonicalLinkURI[0].href) {
           canonicalLinkURI = new URL(canonicalLinkURI[0].href);
           windowURI = new URL(window.location.href);
-          const message = `Canonical: ${canonicalLinkURI}`;
+          const message = `${id} - Canonical: ${canonicalLinkURI}`;
           (canonicalLinkURI.pathname === windowURI.pathname) ?
             console.info(message) : console.error(message);
         } else {
@@ -492,65 +516,54 @@
       }
     }
 
-    try {
-      setTimeout(() => {// This needs to be setTimeout to avoid false positives when website has a redirection
-        checkCanonicalLink();
-      }, 2000);
-    } catch (e) {
-      console.log(e);
-      return;
-    }
+    checkCanonicalLink(masterId);
 
     // Evaluate the ENV variables
-    function getEnvsFromWindow() {
+    function getEnvsFromWindow(id) {
       const env = window.eval("window.ENV");
       if (env) {
-        console.info({ "ENV": env });
+        console.info({ id: id, "ENV": env });
       }
     }
 
     // Evaluate the GTM DataLayer
-    function getDataFromWindow() {
-      const dataLayer = window.eval("window.dataLayer");
-      // const dataLayer = unsafeWindow.dataLayer
-      const pElements = $(".containerErrors div p");
-      const lastMessage = pElements[0] && pElements[0].childNodes[0].data ?
-        pElements[0].childNodes[0].data : "";
-      let lastGTMDataLayer = {};
-      if (lastMessage === "GTM:") {
-        const divElements = $(".containerErrors div[data-object]");
-        try {
-          lastGTMDataLayer = JSON.parse(divElements[0].dataset.object);
-        } catch (e) {
-          console.log(e);
+    function getDataFromWindow(id) {
+      const dataLayer = unsafeWindow.dataLayer;//This the best and simpler way to do it, eval gives random behaviour and code is non-debuggeable
+      if (dataLayer) {
+        let sameObject = false;
+        if (dataLayer.length > 0) {
+          sameObject = JSON.stringify(dataLayer[dataLayer.length - 1]) === JSON.stringify(cache[cache.length - 1]);
         }
-      }
-      let sameObject = false;
-      if (lastGTMDataLayer.length > 0) {
-        sameObject = JSON.stringify(dataLayer[dataLayer.length - 1]) === JSON.stringify(lastGTMDataLayer[lastGTMDataLayer.length - 1]);
-      }
-      if (!sameObject || firstRun) {//If it's the first time render the dataLayer, after that, only render if you detect changes in dataLayer
-        firstRun = false;
-        console.info({ "GTM": dataLayer });
-        //Observe GTM dataLayer
-        //Don't use observer, it's too complicated
-        // const gtmObserver = rxjs.of(dataLayer);
-        // gtmObserver
-        //   .subscribe(x => {
-        // },
-        //   console.log({ "GTM": err });
-        // },
-        // () => {
-        //   console.info({ "GTM": "Observation finished" });
-        // });
-        // window.eval(`window.dataLayer=${gtmObserver} || console.log('Could not do it')`);
+        if ((!sameObject && dataLayer) || firstRun) {//If it's the first time render the dataLayer, after that, only render if you detect changes in dataLayer
+          firstRun = false;
+          cache.push(dataLayer[dataLayer.length - 1]);
+          // console.info({ "GTM": dataLayer });
+          //Observe GTM dataLayer
+          const gtmObserver = rxjs.of(dataLayer);
+          gtmObserver
+            .subscribe(changedDataLayerEntry => {
+                if (changedDataLayerEntry) {
+                  console.info({ id: id, GTM: changedDataLayerEntry });
+                } else {
+                  console.warn("Subscribe null received");
+                }
+              },
+              err => {
+                console.error(err);
+              },
+              () => {
+                console.info("GTM done");
+              });
+        }
       }
     }
 
     //Access window.dataLayer without skipping the Tamper Monkey Sandbox(secure method)
-    setTimeout(getDataFromWindow, 500);
-    // getDataFromWindow()
-    getEnvsFromWindow();
+    setTimeout(() => {
+      getDataFromWindow(masterId);
+      masterId++;
+    }, 2000)
+    getEnvsFromWindow(masterId);
     // try {
     //   unsafeWindow.onYouTubeIframeAPIReady = function() {
     //     alert("API loaded");
@@ -566,5 +579,121 @@
     // } catch (e) {// This is for: Refused to execute inline script because it violates the following Content Security Policy directive: "script-src 'unsafe-eval' 'self' 'sha256-nnRzvGsB15enSSxWufoVP+C4WOA6Spq28ybk2OobhJo=' https://static.observablehq.com https://www.google-analytics.com https://www.googleapis.com https://apis.google.com https://js.stripe.com". Either the 'unsafe-inline' keyword, a hash ('sha256-NW48ymmYcooO0dbY1vr0sH+pipddsZUK7g5L8N3COw8='), or a nonce ('nonce-...') is required to enable inline execution.
     //   console.error(e);
     // }
+    //REPL
+    async function repl() {
+      // let result = "input javascript code";
+      // const expression = prompt(result);
+      const command = $(".replDiv input").val();
+      let result = await eval(command);
+      if (result) {
+        console.info({ response: result });
+      }
+      await sleep(0);
+    }
+
+    function xmlHttpRequestPromise(url, option) {
+      return new Promise(resolve => {
+        const newOption = { url, onload, ...option };
+        if (!newOption.method) newOption.method = "GET";
+        GM.xmlHttpRequest(newOption);
+
+        function onload(response) {
+          resolve(response);
+        }
+      });
+    }
+
+    function sleep(second) {
+      return new Promise(wake => setTimeout(wake, second * 1000));
+    }
+
+    repl();
+
+    //Get Event Url
+    function getEventUrl(event) {
+      try {
+        return new URL(event.url);
+      } catch (e) {//Sometimes event.url will not have `origin` attribute
+        return event.url || undefined;
+      }
+    }
+
+    // Get Json Tree Element from Event
+    function getEventJsonTreeElement(type, event) {
+      let jsonTreeElement, parsedResponse;
+      try {
+        if (type === GTM || type === ENV) {
+          jsonTreeElement = renderjson(event[type]);
+        } else {
+          if (event.response) {
+            parsedResponse = JSON.parse(event.response);
+            jsonTreeElement = renderjson(parsedResponse);
+          }
+        }
+      } catch (e) {
+        // console.log(e); //Sometimes we get malformed JSON
+        try {
+          parsedResponse = JSON.parse(JSON.stringify({ response: event.response }));
+          jsonTreeElement = renderjson(parsedResponse);
+        } catch (e) {
+          console.log(e);
+        }
+      }
+      return jsonTreeElement;
+    }
+
+    // Add Json tree to alert message line
+    function addJsonTreeToRequestLine(url, event, requestLine, type, jsonTreeElement) {
+      if (url) {
+        url = event.url.replace(url.origin, "");
+        requestLine.append("<p class=\"objectMessageP\"><a href=\"" + url + "\">" + url.substring(1, url.length) + "<a/> <br/>" + " " + event.id + " - " + (event.method ? event.method.toUpperCase() : "") + " " + event.statusCode + " " + event.duration + "<p\>"); // adding the error response to the message
+      } else {
+        if (type === GTM || type === ENV) {
+          if (type === GTM && cache.length === 0) {
+            cache.push(event.GTM[event.GTM.length - 1]);
+          }
+          requestLine.append("<p class=\"objectMessageP\">" + event.id + " - " + type + ":<p\>"); // adding the GTM info response to the message
+        } else {
+          requestLine.append("<p class=\"objectMessageP\">" + event.id + " - "+ event[0] + "<p\>"); // adding the error response to the message
+        }
+      }
+      if (jsonTreeElement) {
+        requestLine.append(jsonTreeElement);
+      }
+      if (type === GTM) {
+        requestLine.attr("data-object", JSON.stringify(event[type]));
+        // alertLine.data("gtm-object", JSON.stringify(event[type]));
+      }
+    }
+
+    //This method needs complex logic since every event needs to be rendered differently in the DOM(event, error, info, env_variable, GTM object), TODO NEEDS REFACTOR
+    function appendObjectToRequestLine(event, requestLine, type = "event") {
+      let url, jsonTreeElement;
+      url = getEventUrl(event);
+      jsonTreeElement = getEventJsonTreeElement(type, event);
+      addJsonTreeToRequestLine(url, event, requestLine, type, jsonTreeElement);
+    }
+
+    //Render events into HTML
+    function renderEventInHTML(event, alertType) {
+      alertType = bubbleStates.includes(alertType) ? alertType : "primary";
+      const newId = id++;
+      const requestLine = $("<div id=\"requestId-" + newId + "\" class=\"alert alert-dismissible fade show\" style=\"display: none;\">");
+      // const responseLine = $("<div id=\"responseId-" + newId + "\" style=\"display: block;\">");
+      requestLine.addClass("alert-" + alertType);
+      const close = $("<button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\">&times</button>");
+      requestLine.append(close);
+      if (typeof event === "string") {
+        requestLine.append(event);
+      } else {
+        if (event.GTM || event.ENV) {
+          appendObjectToRequestLine(event, requestLine, event.ENV ? ENV : GTM);
+        } else {
+          appendObjectToRequestLine(event, requestLine);
+        }
+      }
+      requestLine.prependTo(containerErrors).fadeIn(300); //.delay(20000).fadeOut(500); //.delay(5000).fadeOut(500);
+    }
   }
 )();
+
