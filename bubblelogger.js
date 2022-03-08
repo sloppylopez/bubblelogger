@@ -332,6 +332,7 @@
         }
       });
     }
+
     //TODO, We need to return promises here to be able to syncronize the event ids
     //Add custom Event listener to window, XMLHttpRequest
     function addCustomEventListeners(id) {
@@ -351,7 +352,7 @@
             alert("Script Error: See Browser Console for Detail");
           } else {
             message = [
-              id,
+              masterId,
               " Message: " + eventMessage,
               "URL: " + url,
               "Line: " + lineNo,
@@ -375,11 +376,11 @@
         window.onscroll = function(event) {
           event.preventDefault();
           event.stopPropagation();
-          if(!scrolling){
+          if (!scrolling) {
             scrolling = true;
             masterId++;
           }
-          if(timer !== null) {
+          if (timer !== null) {
             clearTimeout(timer);
           }
           timer = setTimeout(function() {
@@ -421,7 +422,7 @@
                 duration: time + "ms",
                 statusCode: ["undefined", "null", "", null, undefined].includes(event.currentTarget.status) ? "unknown" : event.currentTarget.status,
                 response: ["undefined", "null", "", null, undefined].includes(event.currentTarget.response) ? "unknown" : event.currentTarget.response,
-                method: event.currentTarget["nr@context"] && event.currentTarget["nr@context"].params ? event.currentTarget["nr@context"].params.method : method,
+                method: event.currentTarget["nr@context"] && event.currentTarget["nr@context"].params ? event.currentTarget["nr@context"].params.method : method
               });
               sendToConsole(stats);
               timeoutId = null;
@@ -431,6 +432,7 @@
               oldOnReadyStateChange();
             }
           }
+
           if (!this.noIntercept) {
             start = new Date();
             if (this.addEventListener) {
@@ -443,6 +445,7 @@
           send.call(this, data);
         };
       }
+      // let source = rxjs.Node.fromEvent(XMLHttpRequest.prototype.send, 'send');
     }
 
     //Window Load Event Handler
@@ -455,20 +458,20 @@
     // console.info("This document contains " + paragraphCount.numberValue + " paragraph elements");
 
     //Get Xpath and XY Coordinates of any clicked element
-    document.onclick = async (event) => {
+    document.onclick = (event) => {
       // event.stopImmediatePropagation();
-      // event.preventDefault();
       if (event === undefined) event = window.event;                     // IE hack
       let target = "target" in event ? event.target : event.srcElement; // another IE hack
       let root = document.compatMode === "CSS1Compat" ? document.documentElement : document.body;
       let mxy = [event.clientX + root.scrollLeft, event.clientY + root.scrollTop];
       let path = getPathTo(target);
       if (path.includes("requestsBox") || path.includes("svgContainer") || path.includes("containerErrors") || path.includes("requestId-") || path.includes("replDiv")) return;//We don't want to acknowledge the click we do in our own terminal
+      // event.preventDefault();
       masterId++;
       let txy = getPageXY(target);
       console.info(masterId + " - " + path + " <br/>offset x:" + (mxy[0] - txy[0]) + ", y:" + (mxy[1] - txy[1]));
-      await addCustomEventListeners(masterId);
-      await getDataFromWindow(masterId);
+      addCustomEventListeners(masterId);
+      getDataFromWindow(masterId);
     };
 
     function getPathTo(element) {
@@ -477,8 +480,8 @@
       if (element === document.body)
         return element.tagName;
       let ix = 0;
-      if(!element.parentNode){
-        return "";
+      if (!element.parentNode) {
+        return element.tagName;
       }
       let siblings = element.parentNode.childNodes;
       for (let i = 0; i < siblings.length; i++) {
@@ -561,8 +564,7 @@
     //Access window.dataLayer without skipping the Tamper Monkey Sandbox(secure method)
     setTimeout(() => {
       getDataFromWindow(masterId);
-      masterId++;
-    }, 2000)
+    }, 2000);
     getEnvsFromWindow(masterId);
     // try {
     //   unsafeWindow.onYouTubeIframeAPIReady = function() {
@@ -646,7 +648,7 @@
     function addJsonTreeToRequestLine(url, event, requestLine, type, jsonTreeElement) {
       if (url) {
         url = event.url.replace(url.origin, "");
-        requestLine.append("<p class=\"objectMessageP\"><a href=\"" + url + "\">" + url.substring(1, url.length) + "<a/> <br/>" + " " + event.id + " - " + (event.method ? event.method.toUpperCase() : "") + " " + event.statusCode + " " + event.duration + "<p\>"); // adding the error response to the message
+        requestLine.append("<p class=\"objectMessageP\">" + event.id + " - " + (event.method ? event.method.toUpperCase() : "") + " " + event.statusCode + " " + event.duration + "<br/>" + "<a href=\"" + url + "\">" + url.substring(1, url.length) + "<a/><p\>"); // adding the error response to the message
       } else {
         if (type === GTM || type === ENV) {
           if (type === GTM && cache.length === 0) {
@@ -654,7 +656,7 @@
           }
           requestLine.append("<p class=\"objectMessageP\">" + event.id + " - " + type + ":<p\>"); // adding the GTM info response to the message
         } else {
-          requestLine.append("<p class=\"objectMessageP\">" + event.id + " - "+ event[0] + "<p\>"); // adding the error response to the message
+          requestLine.append("<p class=\"objectMessageP\">" + event.id + " - " + event[0] + "<p\>"); // adding the error response to the message
         }
       }
       if (jsonTreeElement) {
