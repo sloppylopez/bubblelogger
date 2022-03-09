@@ -6,6 +6,7 @@
 // @require      https://cdn.jsdelivr.net/npm/renderjson@1.4.0/renderjson.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/rxjs/8.0.0-alpha.2/rxjs.umd.min.js
 // @require      https://cdn.jsdelivr.net/npm/d3@7.3.0/dist/d3.min.js
+// @require      https://cdn.jsdelivr.net/npm/axios@0.26.0/dist/axios.min.js
 // @run-at       document-end
 // @namespace    http://tampermonkey.net/
 // @version      1.0
@@ -50,6 +51,7 @@
     const isIframe = (window.self === window.top);
     const $ = window.jQuery;
     const rxjs = window.rxjs;
+    const axios = window.axios;
     window.dataLayer = window.dataLayer || [];
     const bubbleStates = ["primary", "danger", "warning"];
     let open = XMLHttpRequest.prototype.open;
@@ -248,32 +250,69 @@
     });
     // Add HREF button functionality
     hrefButton.on("click", function() {
-      const anchors = $("a[href]").not(".svgContainer a").not(".containerErrors a");
-      const buttons = $("button");
-      buttons.map((index, button) => {
-        // if($(button).data("events").click){
-        //   $(button).css("background", "red");
-        //   $(button).css("border-color", "yellow");
-        //   $(button).css("border", "2px");
-        // }
-      });
+
+      // const buttons = $("button");
+      // buttons.map((index, button) => {
+      // if($(button).data("events").click){
+      //   $(button).css("background", "red");
+      //   $(button).css("border-color", "yellow");
+      //   $(button).css("border", "2px");
+      // }
+      // });
       try {
+        const anchors = $("a[href^=\"/\"], a[href*=\"" + window.location.host + "\"]")
+          .not(".svgContainer a")
+          .not(".containerErrors a")
+          .not("a[href=\"#\"]");
+        const corsAnchors = $("a[href^=\"http\"]")
+          .not("a[href*=\"" + window.location.host + "\"]")
+          .not("a[href^=\"/\"]")
+          .not(".svgContainer a")
+          .not(".containerErrors a")
+          .not("a[href=\"#\"]");
         // d3.selectAll(anchors).style("background-color", function() {
         //   return "hsl(" + Math.random() * 360 + ",100%,50%)";
         // });
-        d3.selectAll(anchors).style("background-color", function(d, i) {
-          return i % 2 ? "red" : "green";
-        });
-        d3.select("body").transition()
-          .style("background-color", "black");
-        d3.selectAll(anchors).transition()
-          .duration(750)
-          .delay(function(d, i) {
-            return i * 10;
-          })
-          .attr("r", function(d) {
-            return Math.sqrt(d * 1);
+        if (corsAnchors) {
+          corsAnchors.map((index, corsAnchor) => {
+            d3.select(corsAnchor).transition().duration(750)
+              .style("background-color", "#ffc107")
+              .style("border", "5px")
+              .style("border-color", "#ffc107");
           });
+        } else {
+          console.warn("No CORS anchors found");
+        }
+        if (anchors) {
+          anchors.map(async (index, anchor) => {
+            try {
+              await axios.get(anchor.href,{
+                maxRedirects: 0,
+                validateStatus: null})
+              d3.select(anchor).transition().duration(500)
+                .style("background-color", "green")
+                .style("border", "5px")
+                .style("border-color", "green");
+            } catch (error) {
+              d3.select(anchor).transition()
+                .style("background-color", "red")
+                .style("border", "5px")
+                .style("border-color", "red");
+            }
+          });
+        } else {
+          console.warn("No anchors found");
+        }
+        // d3.select("body").transition()
+        //   .style("background-color", "black");
+        // d3.selectAll(anchors).transition()
+        //   .duration(750)
+        //   .delay(function(d, i) {
+        //     return i * 10;
+        //   })
+        //   .attr("r", function(d) {
+        //     return Math.sqrt(d * 1);
+        //   });
       } catch (e) {
         console.error(e);
       }
@@ -335,7 +374,7 @@
 
     //TODO, We need to return promises here to be able to syncronize the event ids
     //Add custom Event listener to window, XMLHttpRequest
-    function addCustomEventListeners(id) {
+    function addCustomEventListeners() {
       let timer = null;
       if (window) {
         let _onerror = function(event, url, lineNo, columnNo, error) {
@@ -450,7 +489,7 @@
 
     //Window Load Event Handler
     window.addEventListener("load", () => {
-      addCustomEventListeners(masterId);
+      addCustomEventListeners();
     });
 
     //Count number of elements
@@ -470,8 +509,8 @@
       masterId++;
       let txy = getPageXY(target);
       console.info(masterId + " - " + path + " <br/>offset x:" + (mxy[0] - txy[0]) + ", y:" + (mxy[1] - txy[1]));
-      addCustomEventListeners(masterId);
-      getDataFromWindow(masterId);
+      addCustomEventListeners();
+      getDataFromWindow();
     };
 
     function getPathTo(element) {
@@ -530,14 +569,14 @@
     }
 
     // Evaluate the GTM DataLayer
-    function getDataFromWindow(id) {
+    function getDataFromWindow() {
       const dataLayer = unsafeWindow.dataLayer;//This the best and simpler way to do it, eval gives random behaviour and code is non-debuggeable
       if (dataLayer) {
         let sameObject = false;
         if (dataLayer.length > 0) {
           sameObject = JSON.stringify(dataLayer[dataLayer.length - 1]) === JSON.stringify(cache[cache.length - 1]);
         }
-        if ((!sameObject && dataLayer) || firstRun) {//If it's the first time render the dataLayer, after that, only render if you detect changes in dataLayer
+        if ((!sameObject && dataLayer) || firstRun || dataLayer.length >= cache.length) {//If it's the first time render the dataLayer, after that, only render if you detect changes in dataLayer
           firstRun = false;
           cache.push(dataLayer[dataLayer.length - 1]);
           // console.info({ "GTM": dataLayer });
@@ -546,7 +585,7 @@
           gtmObserver
             .subscribe(changedDataLayerEntry => {
                 if (changedDataLayerEntry) {
-                  console.info({ id: id, GTM: changedDataLayerEntry });
+                  console.info({ id: masterId, GTM: changedDataLayerEntry });
                 } else {
                   console.warn("Subscribe null received");
                 }
@@ -614,7 +653,7 @@
     //Get Event Url
     function getEventUrl(event) {
       try {
-        return new URL(event.url);
+        return new URL(event.url || event.config.url);
       } catch (e) {//Sometimes event.url will not have `origin` attribute
         return event.url || undefined;
       }
@@ -647,7 +686,7 @@
     // Add Json tree to alert message line
     function addJsonTreeToRequestLine(url, event, requestLine, type, jsonTreeElement) {
       if (url) {
-        url = event.url.replace(url.origin, "");
+        url = event.url ? event.url.replace(url.origin, "") : url.href;
         requestLine.append("<p class=\"objectMessageP\">" + event.id + " - " + (event.method ? event.method.toUpperCase() : "") + " " + event.statusCode + " " + event.duration + "<br/>" + "<a href=\"" + url + "\">" + url.substring(1, url.length) + "<a/><p\>"); // adding the error response to the message
       } else {
         if (type === GTM || type === ENV) {
