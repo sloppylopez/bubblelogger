@@ -9,7 +9,7 @@
 // @require      https://cdn.jsdelivr.net/npm/axios@0.26.0/dist/axios.min.js
 // @run-at       document-end
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @license      MIT
 // @description  log uncaught window (XHR.send, XHR.onerror) exceptions and write them in the document as bootstrap alert html elements
 // @author       Sloppy Lo
@@ -250,7 +250,7 @@
     });
     // Add HREF button functionality
     hrefButton.on("click", function() {
-
+      // <a href="https://www.centralpoint.be/pdf/nl/algemene_handelsvoorwaarden.pdf" target="_blank" rel="noopener" style="background-color: rgb(255, 0, 0); border: 5px rgb(255, 0, 0);">Algemene voorwaarden</a>
       // const buttons = $("button");
       // buttons.map((index, button) => {
       // if($(button).data("events").click){
@@ -277,8 +277,6 @@
           corsAnchors.map((index, corsAnchor) => {
             d3.select(corsAnchor).transition().duration(750)
               .style("background-color", "#ffc107")
-              .style("border", "5px")
-              .style("border-color", "#ffc107");
           });
         } else {
           console.warn("No CORS anchors found");
@@ -286,18 +284,20 @@
         if (anchors) {
           anchors.map(async (index, anchor) => {
             try {
-              await axios.get(anchor.href,{
-                maxRedirects: 0,
-                validateStatus: null})
+              await axios(anchor.href, {
+                maxRedirects: 2,
+                validateStatus: null
+              });
               d3.select(anchor).transition().duration(500)
                 .style("background-color", "green")
-                .style("border", "5px")
-                .style("border-color", "green");
             } catch (error) {
-              d3.select(anchor).transition()
-                .style("background-color", "red")
-                .style("border", "5px")
-                .style("border-color", "red");
+              if (error.request.status === 0) {
+                d3.select(anchor).transition()
+                  .style("background-color", "#ffc107")
+              } else {
+                d3.select(anchor).transition()
+                  .style("background-color", "red")
+              }
             }
           });
         } else {
@@ -364,7 +364,7 @@
       stats.forEach((stat) => {
         if (stat.statusCode >= 200 && stat.statusCode < 400) {
           console.info(stat);
-        } else if (stat.statusCode === 404) {
+        } else if (stat.statusCode === 404 || stat.statusCode === 0) {
           console.warn(stat);
         } else {
           console.error(stat);
@@ -576,7 +576,7 @@
         if (dataLayer.length > 0) {
           sameObject = JSON.stringify(dataLayer[dataLayer.length - 1]) === JSON.stringify(cache[cache.length - 1]);
         }
-        if ((!sameObject && dataLayer) || firstRun || dataLayer.length >= cache.length) {//If it's the first time render the dataLayer, after that, only render if you detect changes in dataLayer
+        if ((!sameObject && dataLayer) || firstRun) {//If it's the first time render the dataLayer, after that, only render if you detect changes in dataLayer
           firstRun = false;
           cache.push(dataLayer[dataLayer.length - 1]);
           // console.info({ "GTM": dataLayer });
