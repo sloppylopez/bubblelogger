@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Bubble Logger",
+  "version": "1.0",
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "jquery-3.4.1.min.js",
+        "popper-1.16.0.min.js",
+        "bootstrap-4.4.1.min.js",
+        "renderjson-1.4.0.min.js",
+        "rxjs-8.0.0.min.js",
+        "d3-7.3.0.min.js",
+        "axios-0.26.0.min.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
