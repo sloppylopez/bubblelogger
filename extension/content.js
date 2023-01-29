@@ -48,4 +48,15 @@ for (var i = 0; i < srcArray.length; i++) {
     (document.head || document.documentElement).appendChild(s);
 }
 
+var styles = [
+  "css/bootstrap-4.4.1.min.css",
+  "css/animate-4.1.1.min.css",
+];
+for (var i = 0; i < styles.length; i++) {
+    var style = document.createElement("link");
+    style.rel = "stylesheet";
+    style.href = chrome.runtime.getURL(styles[i]);
+    document.head.appendChild(style);
+}
+
 document.body.innerHTML = "<h1>Hello World</h1>" + document.body.innerHTML;
