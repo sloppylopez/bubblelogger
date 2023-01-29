@@ -30,13 +30,13 @@
 //
 
 var srcArray =[
-        "jquery-3.4.1.min.js",
-        "popper-1.16.0.min.js",
-        "bootstrap-4.4.1.min.js",
-        "renderjson-1.4.0.min.js",
-        "rxjs-8.0.0.min.js",
-        "d3-7.3.0.min.js",
-        "axios-0.26.0.min.js"
+        "lib/jquery-3.4.1.min.js",
+        "lib/popper-1.16.0.min.js",
+        "lib/bootstrap-4.4.1.min.js",
+        "lib/renderjson-1.4.0.min.js",
+        "lib/rxjs-8.0.0.min.js",
+        "lib/d3-7.3.0.min.js",
+        "lib/axios-0.26.0.min.js"
       ];
 
 for (var i = 0; i < srcArray.length; i++) {
