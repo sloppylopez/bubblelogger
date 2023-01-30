@@ -2,10 +2,12 @@
   "manifest_version": 3,
   "name": "Bubble Logger",
   "version": "1.0",
+  "permissions": [
+    "activeTab"
+  ],
   "web_accessible_resources": [
     {
       "resources": [
-        "lib/jquery-3.4.1.min.js",
         "lib/popper-1.16.0.min.js",
         "lib/bootstrap-4.4.1.min.js",
         "lib/renderjson-1.4.0.min.js",
@@ -26,9 +28,16 @@
         "<all_urls>"
       ],
       "js": [
+        "lib/jquery-3.4.1.min.js",
+        "lib/popper-1.16.0.min.js",
+        "lib/bootstrap-4.4.1.min.js",
+        "lib/renderjson-1.4.0.min.js",
+        "lib/rxjs-8.0.0.min.js",
+        "lib/d3-7.3.0.min.js",
+        "lib/axios-0.26.0.min.js",
         "content.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_end"
     }
   ]
 }
