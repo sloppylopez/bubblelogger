@@ -5,8 +5,14 @@
   "permissions": [
     "activeTab"
   ],
+  "content_security_policy": {
+    "extension_page":"script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
   "web_accessible_resources": [
     {
+      "content_security_policy": {
+        "extension_page":"script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+      },
       "resources": [
         "lib/popper-1.16.0.min.js",
         "lib/bootstrap-4.4.1.min.js",
@@ -15,7 +21,8 @@
         "lib/d3-7.3.0.min.js",
         "lib/axios-0.26.0.min.js",
         "css/bootstrap-4.4.1.min.css",
-        "css/animate-4.1.1.min.css"
+        "css/animate-4.1.1.min.css",
+        "content.js"
       ],
       "matches": [
         "<all_urls>"
@@ -24,6 +31,9 @@
   ],
   "content_scripts": [
     {
+      "content_security_policy": {
+        "extension_page":"script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+      },
       "matches": [
         "<all_urls>"
       ],
@@ -35,9 +45,9 @@
         "lib/rxjs-8.0.0.min.js",
         "lib/d3-7.3.0.min.js",
         "lib/axios-0.26.0.min.js",
-        "content.js"
+        "inject.js"
       ],
-      "run_at": "document_end"
+      "run_at": "document_start"
     }
   ]
 }
