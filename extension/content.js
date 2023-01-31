@@ -244,12 +244,8 @@
             let children = $(element).find("div");
             return children.map(function () {
                 let childDiv = $(this);
-                console.log(childDiv.html());
-                let result = childDiv.find("*").filter(function () {
-                    return $(this).html().indexOf(word) !== -1;
-                });
-                console.log(result)
-                return result.length >= 1 || word.length === 0 ? childDiv.css("display", "block") : childDiv.css("display", "none");
+                // console.log(childDiv.html());
+                return word.length === 0 || childDiv.html().contains(word) ? childDiv.css("display", "block") : childDiv.css("display", "none");
             });
         }
 
