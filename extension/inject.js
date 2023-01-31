@@ -1,4 +1,4 @@
-var srcArray = [
+let srcArray = [
     "lib/popper-1.16.0.min.js",
     "lib/bootstrap-4.4.1.min.js",
     "lib/renderjson-1.4.0.min.js",
@@ -7,8 +7,8 @@ var srcArray = [
     "lib/axios-0.26.0.min.js"
 ];
 
-for (var i = 0; i < srcArray.length; i++) {
-    var s = document.createElement('script');
+for (let i = 0; i < srcArray.length; i++) {
+    let s = document.createElement('script');
     s.src = chrome.runtime.getURL(srcArray[i]);
     s.onload = function () {
         this.remove();
@@ -16,18 +16,19 @@ for (var i = 0; i < srcArray.length; i++) {
     (document.head || document.documentElement).appendChild(s);
 }
 
-var styles = [
+let styles = [
     "css/bootstrap-4.4.1.min.css",
     "css/animate-4.1.1.min.css",
 ];
-for (var i = 0; i < styles.length; i++) {
-    var style = document.createElement("link");
+
+for (let e = 0; e < styles.length; e++) {
+    let style = document.createElement("link");
     style.rel = "stylesheet";
-    style.href = chrome.runtime.getURL(styles[i]);
+    style.href = chrome.runtime.getURL(styles[e]);
     (document.head || document.documentElement).appendChild(style);
 }
 
-const nullthrows = (v) => {
+const nullThrows = (v) => {
     if (v == null) throw new Error("it's a null");
     return v;
 }
@@ -43,7 +44,7 @@ function injectCode(src) {
 
     // This script runs before the <head> element is created,
     // so we add the script to <html> instead.
-    nullthrows(document.head || document.documentElement).appendChild(script);
+    nullThrows(document.head || document.documentElement).appendChild(script);
 }
 
 injectCode(chrome.runtime.getURL('/content.js'));
