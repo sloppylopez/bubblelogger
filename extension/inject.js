@@ -46,5 +46,4 @@ function injectCode(src) {
     nullthrows(document.head || document.documentElement).appendChild(script);
 }
 
-
 injectCode(chrome.runtime.getURL('/content.js'));
