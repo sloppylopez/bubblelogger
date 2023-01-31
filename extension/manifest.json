@@ -10,9 +10,6 @@
   },
   "web_accessible_resources": [
     {
-      "content_security_policy": {
-        "extension_page":"script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
-      },
       "resources": [
         "lib/jquery-3.4.1.min.js",
         "lib/popper-1.16.0.min.js",
@@ -32,9 +29,6 @@
   ],
   "content_scripts": [
     {
-      "content_security_policy": {
-        "extension_page":"script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
-      },
       "matches": [
         "<all_urls>"
       ],

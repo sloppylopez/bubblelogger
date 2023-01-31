@@ -169,7 +169,7 @@
                           }
                           .replDiv input {
                                   background-color: #1f1f22 !important;
-                                  height: 100% !important;
+                                  height: 91% !important;
                                   width: 100% !important;
                                   font-size: 18px !important;
                                   border: 0 !important;
