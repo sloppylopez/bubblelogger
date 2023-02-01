@@ -231,33 +231,29 @@
                 rxjs.map((event) => {
                     return event.target.value;
                 }),
-                rxjs.debounceTime(600),
+                rxjs.debounceTime(1000),
                 rxjs.distinctUntilChanged()
             )
             .subscribe((text) => {
-                console.log(text);
-                let containingDivs = hiddenDivElementsNotContainingWord(containerErrors, text)
-                return containingDivs;
+                // console.log(text);
+                let regExp = new RegExp(text, 'gmi');
+                return hiddenDivElementsNotContainingWord(containerErrors, regExp, text);
             });
 
-        function hiddenDivElementsNotContainingWord(element, word) {
+        function hiddenDivElementsNotContainingWord(element, regExp, text) {
             let children = $(element).find("div");
             return children.map(function () {
                 let childDiv = $(this);
-                // console.log(childDiv.html());
-                return word.length === 0 || childDiv.html().contains(word) ? childDiv.css("display", "block") : childDiv.css("display", "none");
+                console.log(childDiv.html());
+                return text.length === 0 || searchWithRegex(childDiv.html(), regExp) ?
+                    childDiv.css("display", "block") :
+                    childDiv.css("display", "none");
             });
         }
 
-        // let autoSuggest$ = textChange$
-        //     .pipe(
-        //         rxjs.map(e => e.target.value), // Extract value here
-        //         rxjs.debounceTime(1000),
-        //         rxjs.distinctUntilChanged(),
-        //         rxjs.mergeMap(value => {
-        //             console.log('hola')
-        //         })
-        //     );
+        function searchWithRegex(text, regExp) {
+            return text.search(regExp) !== -1;
+        }
 
         replDiv.appendTo(containerSvg);
         buttonsDiv.appendTo(containerSvg);
@@ -804,4 +800,5 @@
         }
     }
 )();
+
 
