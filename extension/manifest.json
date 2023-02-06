@@ -3,7 +3,10 @@
   "name": "Bubble Logger",
   "version": "1.0",
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "storage",
+    "declarativeContent",
+    "cookies"
   ],
   "content_security_policy": {
     "extension_page":"script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
@@ -18,8 +21,10 @@
         "lib/rxjs-8.0.0.min.js",
         "lib/d3-7.3.0.min.js",
         "lib/axios-0.26.0.min.js",
+        "lib/jquery.mark-8.11.1.min.js",
         "css/bootstrap-4.4.1.min.css",
         "css/animate-4.1.1.min.css",
+        "css/styles.css",
         "content.js"
       ],
       "matches": [
@@ -40,6 +45,7 @@
         "lib/rxjs-8.0.0.min.js",
         "lib/d3-7.3.0.min.js",
         "lib/axios-0.26.0.min.js",
+        "lib/jquery.mark-8.11.1.min.js",
         "inject.js"
       ],
       "run_at": "document_start"

@@ -27,6 +27,7 @@
 //"https://cdn.jsdelivr.net/npm/axios@0.26.0/dist/axios.min.js"]
 //
 //https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/commands
+//https://jsfiddle.net/julmot/973gdh8g/
 
 
 // IIFE
@@ -130,7 +131,7 @@
             GM_addStyle(buttonsDivCss);
             // const responsesBoxCss = ".responsesBox {position: fixed !important; right: 0% !important; top: 70% !important; width: 50% !important; z-index: 99999999 !important; overflow-y: scroll !important;}";
             // GM_addStyle(responsesBoxCss);
-            const top = (isIframe) ? "10.5%" : "26%";
+            const top = (isIframe) ? "81px" : "26%";
             const containerErrorsCSSWidth = (isIframe) ? "388px" : "351px";
             const containerErrorsCss = `.containerErrors {
                                       display: none;
@@ -201,9 +202,8 @@
         refreshButton.prependTo(buttonsDiv);
         hrefButton.prependTo(buttonsDiv);
         closeButton.prependTo(buttonsDiv);
-
         spinner.prependTo(containerSvg);
-        let body = $("body");
+        const body = $("body");
         let replInputTextChangeKeyDown$ = rxjs.fromEvent(replInput, 'keydown')
             .pipe(
                 rxjs.map((event) => {
@@ -215,7 +215,7 @@
             )
             .subscribe(async () => {
                 const command = $(".replDiv input").val();
-                let result = await eval(command);
+                const result = await eval(command);
                 if (result) {
                     console.info({response: result});
                 }
@@ -237,17 +237,28 @@
             .subscribe((text) => {
                 // console.log(text);
                 let regExp = new RegExp(text, 'gmi');
-                return hiddenDivElementsNotContainingWord(containerErrors, regExp, text);
+                hiddenDivElementsNotContainingWord(containerErrors, regExp, text);
             });
 
         function hiddenDivElementsNotContainingWord(element, regExp, text) {
+            $(element).unmark(text);
             let children = $(element).find("div");
             return children.map(function () {
                 let childDiv = $(this);
-                console.log(childDiv.html());
-                return text.length === 0 || searchWithRegex(childDiv.html(), regExp) ?
-                    childDiv.css("display", "block") :
-                    childDiv.css("display", "none");
+                // console.log(childDiv.html());
+                let foundMatch = text.length === 0 || searchWithRegex(childDiv.html(), regExp);
+                if (foundMatch) {
+                    if (text.contains('|')) {
+                        text.split("|").map(function (textPart) {
+                            $(childDiv).mark(textPart, {"caseSensitive": false});
+                        })
+                    } else {
+                        $(childDiv).mark(text, {"caseSensitive": false});
+                    }
+                    childDiv.css("display", "block")
+                } else {
+                    childDiv.css("display", "none")
+                }
             });
         }
 
@@ -543,7 +554,7 @@
                         }
                     }
 
-                    if (!this.noIntercept) {
+                    if (!this.noIntercept) {//TODO: check if this is required
                         start = new Date();
                         if (this.addEventListener) {
                             this.addEventListener("readystatechange", onReadyStateChange, false);

@@ -4,12 +4,14 @@ let srcArray = [
     "lib/renderjson-1.4.0.min.js",
     "lib/rxjs-8.0.0.min.js",
     "lib/d3-7.3.0.min.js",
-    "lib/axios-0.26.0.min.js"
+    "lib/axios-0.26.0.min.js",
+    "lib/jquery.mark-8.11.1.min.js"
 ];
 
 for (let i = 0; i < srcArray.length; i++) {
     let s = document.createElement('script');
     s.src = chrome.runtime.getURL(srcArray[i]);
+    s.charset = 'UTF-8'
     s.onload = function () {
         this.remove();
     };
@@ -19,6 +21,7 @@ for (let i = 0; i < srcArray.length; i++) {
 let styles = [
     "css/bootstrap-4.4.1.min.css",
     "css/animate-4.1.1.min.css",
+    "css/styles.css"
 ];
 
 for (let e = 0; e < styles.length; e++) {
